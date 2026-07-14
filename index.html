@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Converta certificados entre PFX/P12, PEM, CRT, CER, KEY e JKS inteiramente no navegador — nenhum arquivo é enviado a um servidor.">
+<title>Conversor de Certificados</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%230a0f1c'/%3E%3Ccircle cx='50' cy='50' r='30' fill='none' stroke='%232dd4bf' stroke-width='6'/%3E%3C/svg%3E">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/forge/1.3.1/forge.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+  :root{
+    --bg: #0a0f1c;
+    --panel: #111a2c;
+    --panel-2: #0d1526;
+    --border: #1f2c45;
+    --border-soft: #16213a;
+    --text: #e7ebf3;
+    --muted: #8a93a8;
+    --teal: #2dd4bf;
+    --teal-dim: #1a8c7e;
+    --amber: #f0a83c;
+    --red: #ef6b6b;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'Inter', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{padding:32px 20px 80px;}
+  .wrap{max-width:880px;margin:0 auto;}
+
+  /* ---- Header / signature chain diagram ---- */
+  header{margin-bottom:36px;}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;color:var(--teal);text-transform:uppercase;margin-bottom:10px;}
+  h1{font-family:var(--mono);font-size:28px;font-weight:700;margin:0 0 8px;letter-spacing:-0.01em;}
+  .sub{color:var(--muted);font-size:14.5px;line-height:1.5;max-width:600px;margin:0 0 26px;}
+
+  .chain-diagram{width:100%;height:auto;display:block;margin-bottom:6px;}
+  .chain-node-label{font-family:var(--mono);font-size:11px;fill:var(--muted);}
+  .chain-node-label.active{fill:var(--teal);}
+  .chain-dot{animation:travel 6s linear infinite;}
+  @keyframes travel{
+    0%{offset-distance:0%;}
+    100%{offset-distance:100%;}
+  }
+  .privacy-note{display:flex;gap:10px;align-items:flex-start;background:rgba(45,212,191,.06);border:1px solid rgba(45,212,191,.25);border-radius:8px;padding:12px 14px;font-size:13px;color:#bfe9e2;margin-top:18px;}
+  .privacy-note b{color:var(--teal);}
+
+  /* ---- Panels ---- */
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:22px;margin-bottom:18px;}
+  .panel h2{font-family:var(--mono);font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:var(--text);margin:0 0 4px;display:flex;align-items:center;gap:10px;}
+  .panel h2 .num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:5px;background:var(--teal);color:#06231f;font-size:11px;font-weight:700;}
+  .panel .desc{color:var(--muted);font-size:13px;margin:0 0 18px;}
+
+  /* tabs */
+  .tabs{display:flex;gap:4px;margin-bottom:18px;border-bottom:1px solid var(--border);}
+  .tab-btn{background:none;border:none;color:var(--muted);font-family:var(--mono);font-size:13px;padding:9px 4px;margin-right:18px;cursor:pointer;border-bottom:2px solid transparent;transition:.15s;}
+  .tab-btn.active{color:var(--teal);border-bottom-color:var(--teal);}
+  .tab-pane{display:none;}
+  .tab-pane.active{display:block;}
+
+  label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;font-family:var(--mono);}
+  .field{margin-bottom:16px;}
+  input[type=file], input[type=password], input[type=text]{
+    width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:7px;
+    color:var(--text);padding:10px 12px;font-size:13.5px;font-family:var(--sans);
+  }
+  input[type=file]{padding:8px;font-size:12.5px;color:var(--muted);}
+  input:focus{outline:none;border-color:var(--teal);}
+  .row{display:flex;gap:14px;flex-wrap:wrap;}
+  .row > div{flex:1;min-width:200px;}
+
+  button.action{
+    background:var(--teal);color:#06231f;border:none;border-radius:7px;
+    font-family:var(--mono);font-weight:700;font-size:13px;padding:11px 20px;cursor:pointer;
+    transition:.15s; letter-spacing:.02em;
+  }
+  button.action:hover{background:#3fe4ce;}
+  button.action:disabled{background:var(--border);color:var(--muted);cursor:not-allowed;}
+  button.action:focus-visible{outline:2px solid var(--teal);outline-offset:2px;}
+  button.ghost{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:7px;font-family:var(--mono);font-size:12px;padding:8px 14px;cursor:pointer;}
+  button.ghost:hover{border-color:var(--teal);color:var(--teal);}
+
+  .msg{font-family:var(--mono);font-size:12.5px;padding:10px 12px;border-radius:7px;margin-top:14px;display:none;white-space:pre-wrap;}
+  .msg.error{display:block;background:rgba(239,107,107,.08);border:1px solid rgba(239,107,107,.35);color:var(--red);}
+  .msg.success{display:block;background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.35);color:var(--teal);}
+  .msg.warn{display:block;background:rgba(240,168,60,.08);border:1px solid rgba(240,168,60,.35);color:var(--amber);}
+
+  /* certificate cards */
+  .cert-card{border:1px solid var(--border-soft);background:var(--panel-2);border-radius:8px;padding:13px 14px;margin-bottom:10px;}
+  .cert-card .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .cert-card .top label{margin:0;color:var(--text);font-size:13px;font-family:var(--sans);font-weight:600;display:flex;align-items:center;gap:8px;}
+  .cert-meta{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.7;}
+  .badge{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:20px;border:1px solid var(--teal-dim);color:var(--teal);text-transform:uppercase;letter-spacing:.05em;}
+  .badge.leaf{background:rgba(45,212,191,.12);}
+  .badge.key{border-color:var(--amber);color:var(--amber);}
+
+  /* output format grid */
+  .fmt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:18px;}
+  .fmt-card{border:1px solid var(--border);background:var(--panel-2);border-radius:8px;padding:14px;cursor:pointer;transition:.15s;}
+  .fmt-card:hover{border-color:var(--teal-dim);}
+  .fmt-card.selected{border-color:var(--teal);background:rgba(45,212,191,.07);}
+  .fmt-card .ext{font-family:var(--mono);font-weight:700;font-size:15px;color:var(--text);}
+  .fmt-card .ext-desc{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.4;}
+
+  .opts{border-top:1px dashed var(--border);padding-top:16px;margin-top:6px;}
+  .hidden{display:none !important;}
+
+  details{margin-top:16px;}
+  summary{cursor:pointer;font-family:var(--mono);font-size:12.5px;color:var(--muted);}
+  summary:hover{color:var(--teal);}
+  pre.cmd{background:var(--panel-2);border:1px solid var(--border);border-radius:7px;padding:12px 14px;font-family:var(--mono);font-size:12px;color:#c7d3e8;overflow-x:auto;margin-top:10px;}
+
+  footer{text-align:center;color:var(--muted);font-size:12px;margin-top:30px;font-family:var(--mono);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Ferramenta local de certificados</div>
+    <h1>Conversor de Certificados</h1>
+    <p class="sub">Converta entre PFX/P12, PEM, CRT, CER, KEY e JKS diretamente no navegador. Carregue um certificado, escolha o formato de saída e baixe o arquivo convertido.</p>
+
+    <svg class="chain-diagram" viewBox="0 0 820 90" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <path id="chainpath" d="M 60 45 L 270 45 L 480 45 L 690 45" />
+      </defs>
+      <line x1="60" y1="45" x2="690" y2="45" stroke="#1f2c45" stroke-width="2" stroke-dasharray="3 6"/>
+      <circle cx="60" cy="45" r="22" fill="#111a2c" stroke="#2dd4bf" stroke-width="1.5"/>
+      <circle cx="270" cy="45" r="22" fill="#111a2c" stroke="#2dd4bf" stroke-width="1.5"/>
+      <circle cx="480" cy="45" r="22" fill="#111a2c" stroke="#2dd4bf" stroke-width="1.5"/>
+      <circle cx="690" cy="45" r="22" fill="#111a2c" stroke="#2dd4bf" stroke-width="1.5"/>
+      <text x="60" y="50" text-anchor="middle" class="chain-node-label active" font-weight="600">PFX</text>
+      <text x="270" y="50" text-anchor="middle" class="chain-node-label active" font-weight="600">PEM</text>
+      <text x="480" y="50" text-anchor="middle" class="chain-node-label active" font-weight="600">JKS</text>
+      <text x="690" y="50" text-anchor="middle" class="chain-node-label active" font-weight="600">CRT</text>
+      <circle r="4" fill="#2dd4bf" class="chain-dot" style="offset-path: path('M 60 45 L 270 45 L 480 45 L 690 45');"></circle>
+    </svg>
+
+    <div class="privacy-note">
+      <span>🔒</span>
+      <div><b>Tudo roda localmente.</b> A conversão acontece inteiramente no seu navegador com a biblioteca node-forge — nenhum arquivo, senha ou chave privada é enviado para qualquer servidor.</div>
+    </div>
+  </header>
+
+  <!-- STEP 1: SOURCE -->
+  <div class="panel">
+    <h2><span class="num">1</span>Carregar certificado de origem</h2>
+    <p class="desc">Escolha como seu certificado está empacotado hoje.</p>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="pfx">PFX / P12</button>
+      <button class="tab-btn" data-tab="pem">PEM / CRT (+ chave opcional)</button>
+    </div>
+
+    <div class="tab-pane active" id="tab-pfx">
+      <div class="row">
+        <div class="field">
+          <label>Arquivo .pfx ou .p12</label>
+          <input type="file" id="pfxFile" accept=".pfx,.p12">
+        </div>
+        <div class="field">
+          <label>Senha do arquivo</label>
+          <input type="password" id="pfxPassword" placeholder="senha de importação">
+        </div>
+      </div>
+      <button class="action" id="btnParsePfx">Ler certificado</button>
+    </div>
+
+    <div class="tab-pane" id="tab-pem">
+      <div class="row">
+        <div class="field">
+          <label>Certificado (.pem / .crt / .cer)</label>
+          <input type="file" id="certFile" accept=".pem,.crt,.cer,.cert">
+        </div>
+        <div class="field">
+          <label>Chave privada (.key / .pem) — opcional</label>
+          <input type="file" id="keyFile" accept=".key,.pem">
+        </div>
+      </div>
+      <div class="field" style="max-width:300px;">
+        <label>Senha da chave (se criptografada)</label>
+        <input type="password" id="keyPassword" placeholder="opcional">
+      </div>
+      <button class="action" id="btnParsePem">Ler certificado</button>
+    </div>
+
+    <div class="msg" id="sourceMsg"></div>
+  </div>
+
+  <!-- STEP 2: DETECTED CONTENT -->
+  <div class="panel hidden" id="panelDetected">
+    <h2><span class="num">2</span>Conteúdo detectado</h2>
+    <p class="desc">Marque qual certificado é o principal (leaf) e quais entram na cadeia exportada.</p>
+    <div id="certList"></div>
+  </div>
+
+  <!-- STEP 3: OUTPUT -->
+  <div class="panel hidden" id="panelOutput">
+    <h2><span class="num">3</span>Formato de saída</h2>
+    <div class="fmt-grid" id="fmtGrid">
+      <div class="fmt-card" data-fmt="pem"><div class="ext">.PEM</div><div class="ext-desc">Texto Base64, cadeia + chave opcional</div></div>
+      <div class="fmt-card" data-fmt="crt-pem"><div class="ext">.CRT</div><div class="ext-desc">Certificado único, texto Base64</div></div>
+      <div class="fmt-card" data-fmt="crt-der"><div class="ext">.CRT (DER)</div><div class="ext-desc">Certificado único, binário</div></div>
+      <div class="fmt-card" data-fmt="cer-pem"><div class="ext">.CER</div><div class="ext-desc">Certificado único, texto Base64</div></div>
+      <div class="fmt-card" data-fmt="cer-der"><div class="ext">.CER (DER)</div><div class="ext-desc">Certificado único, binário</div></div>
+      <div class="fmt-card" data-fmt="pfx"><div class="ext">.PFX / .P12</div><div class="ext-desc">Pacote com chave privada protegido por senha</div></div>
+      <div class="fmt-card" data-fmt="jks"><div class="ext">.JKS</div><div class="ext-desc">Truststore Java (apenas certificados)</div></div>
+      <div class="fmt-card" data-fmt="key"><div class="ext">.KEY</div><div class="ext-desc">Somente a chave privada</div></div>
+    </div>
+
+    <div class="opts hidden" id="optsPem">
+      <div class="row">
+        <div class="field">
+          <label><input type="checkbox" id="pemIncludeKey" checked> Incluir chave privada (se disponível)</label>
+        </div>
+        <div class="field">
+          <label>Formato da chave</label>
+          <select id="pemKeyFormat" style="width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:10px 12px;font-size:13.5px;">
+            <option value="pkcs8">PKCS#8 (PRIVATE KEY)</option>
+            <option value="pkcs1">PKCS#1 (RSA PRIVATE KEY)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="opts hidden" id="optsPfx">
+      <div class="row">
+        <div class="field">
+          <label>Senha do novo arquivo PFX</label>
+          <input type="password" id="pfxOutPassword" placeholder="defina uma senha">
+        </div>
+        <div class="field">
+          <label>Nome amigável (alias)</label>
+          <input type="text" id="pfxOutAlias" placeholder="ex: meu-certificado" value="certificado">
+        </div>
+      </div>
+      <div class="msg warn" style="display:block;">Requer uma chave privada carregada na etapa 1.</div>
+    </div>
+
+    <div class="opts hidden" id="optsJks">
+      <div class="row">
+        <div class="field">
+          <label>Senha do keystore JKS</label>
+          <input type="password" id="jksOutPassword" placeholder="defina uma senha">
+        </div>
+        <div class="field">
+          <label>Prefixo do alias</label>
+          <input type="text" id="jksOutAlias" placeholder="ex: meu-certificado" value="certificado">
+        </div>
+      </div>
+      <div class="msg warn" style="display:block;">Gera um <b>truststore</b> (somente certificados públicos). O formato JKS para entradas com chave privada usa um algoritmo proprietário da Oracle não reimplementado aqui — veja o comando equivalente abaixo.</div>
+      <details>
+        <summary>Preciso de um JKS com a chave privada →</summary>
+        <pre class="cmd">keytool -importkeystore \
+  -srckeystore certificado.pfx -srcstoretype PKCS12 \
+  -destkeystore certificado.jks -deststoretype JKS</pre>
+      </details>
+    </div>
+
+    <div class="opts hidden" id="optsKey">
+      <div class="row">
+        <div class="field">
+          <label>Formato da chave</label>
+          <select id="keyOutFormat" style="width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:10px 12px;font-size:13.5px;">
+            <option value="pkcs8">PKCS#8 (PRIVATE KEY)</option>
+            <option value="pkcs1">PKCS#1 (RSA PRIVATE KEY)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Senha de criptografia (opcional)</label>
+          <input type="password" id="keyOutPassword" placeholder="deixe em branco para não criptografar">
+        </div>
+      </div>
+      <div class="msg warn" style="display:block;">Requer uma chave privada carregada na etapa 1. Se uma senha for definida, a chave é exportada como PKCS#8 criptografado (independente da opção de formato acima).</div>
+    </div>
+
+    <div style="margin-top:20px;">
+      <button class="action" id="btnConvert" disabled>Converter e baixar</button>
+    </div>
+    <div class="msg" id="outputMsg"></div>
+  </div>
+
+  <footer>processamento 100% local · node-forge · nenhum dado sai do seu navegador</footer>
+</div>
+
+<script>
+(function(){
+  // ---------- state ----------
+  let parsedCerts = []; // {cert, alias, isLeaf, include}
+  let parsedKey = null;
+  let selectedFmt = null;
+
+  // ---------- generic helpers ----------
+  function $(id){ return document.getElementById(id); }
+  function showMsg(el, text, type){
+    el.className = 'msg ' + type;
+    el.textContent = text;
+    el.style.display = 'block';
+  }
+  function clearMsg(el){ el.style.display='none'; el.textContent=''; }
+
+  function ab2binstr(buf){
+    const u8 = new Uint8Array(buf);
+    let s = '';
+    const CHUNK = 0x8000;
+    for(let i=0;i<u8.length;i+=CHUNK){
+      s += String.fromCharCode.apply(null, u8.subarray(i, i+CHUNK));
+    }
+    return s;
+  }
+  function binStrToUint8(str){
+    const arr = new Uint8Array(str.length);
+    for(let i=0;i<str.length;i++) arr[i] = str.charCodeAt(i) & 0xFF;
+    return arr;
+  }
+  function uint8ToBinStr(u8){
+    let s = '';
+    const CHUNK = 0x8000;
+    for(let i=0;i<u8.length;i+=CHUNK){
+      s += String.fromCharCode.apply(null, u8.subarray(i, i+CHUNK));
+    }
+    return s;
+  }
+  function readFileAsArrayBuffer(file){
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.onerror = () => rej(new Error('Falha ao ler o arquivo'));
+      r.readAsArrayBuffer(file);
+    });
+  }
+  function readFileAsText(file){
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.onerror = () => rej(new Error('Falha ao ler o arquivo'));
+      r.readAsText(file);
+    });
+  }
+  function triggerDownload(blob, filename){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+  }
+  function downloadText(text, filename){
+    triggerDownload(new Blob([text], {type:'text/plain'}), filename);
+  }
+  function downloadBinary(u8orBinStr, filename, mime){
+    const u8 = (typeof u8orBinStr === 'string') ? binStrToUint8(u8orBinStr) : u8orBinStr;
+    triggerDownload(new Blob([u8], {type: mime || 'application/octet-stream'}), filename);
+  }
+
+  // ---------- tabs ----------
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      $('tab-' + btn.dataset.tab).classList.add('active');
+      clearMsg($('sourceMsg'));
+    });
+  });
+
+  // ---------- certificate metadata ----------
+  function certInfo(cert){
+    const fmt = attrs => attrs.map(a => (a.shortName||a.name||a.type) + '=' + a.value).join(', ');
+    return {
+      subject: fmt(cert.subject.attributes),
+      issuer: fmt(cert.issuer.attributes),
+      validFrom: cert.validity.notBefore.toLocaleDateString('pt-BR'),
+      validTo: cert.validity.notAfter.toLocaleDateString('pt-BR'),
+      serial: cert.serialNumber,
+    };
+  }
+  function dnKey(attrs){ return attrs.map(a=>(a.shortName||a.name||a.type)+'='+a.value).join(','); }
+  function guessLeafIndex(items){
+    for(let i=0;i<items.length;i++){
+      const subj = dnKey(items[i].cert.subject.attributes);
+      const isIssuerOfOther = items.some((c,j)=> j!==i && dnKey(c.cert.issuer.attributes) === subj);
+      if(!isIssuerOfOther) return i;
+    }
+    return 0;
+  }
+
+  // ---------- private key loading (PEM, multi-format) ----------
+  function loadPrivateKey(pemText, password){
+    const errors = [];
+    try {
+      if(/-----BEGIN RSA PRIVATE KEY-----/.test(pemText) && !/Proc-Type/.test(pemText)){
+        return forge.pki.privateKeyFromPem(pemText);
+      }
+    } catch(e){ errors.push('PKCS1: ' + e.message); }
+
+    try {
+      if(/Proc-Type:\s*4,ENCRYPTED/.test(pemText)){
+        const key = forge.pki.decryptRsaPrivateKey(pemText, password || '');
+        if(key) return key;
+        errors.push('PKCS1 criptografado: senha incorreta');
+      }
+    } catch(e){ errors.push('PKCS1-enc: ' + e.message); }
+
+    try {
+      if(/-----BEGIN PRIVATE KEY-----/.test(pemText)){
+        const der = forge.pem.decode(pemText)[0].body;
+        const asn1 = forge.asn1.fromDer(der);
+        const rsaAsn1 = forge.asn1.fromDer(asn1.value[2].value);
+        return forge.pki.privateKeyFromAsn1(rsaAsn1);
+      }
+    } catch(e){ errors.push('PKCS8: ' + e.message); }
+
+    try {
+      if(/-----BEGIN ENCRYPTED PRIVATE KEY-----/.test(pemText)){
+        const encInfo = forge.pki.encryptedPrivateKeyFromPem(pemText);
+        const pkInfo = forge.pki.decryptPrivateKeyInfo(encInfo, password || '');
+        if(!pkInfo){ errors.push('PKCS8 criptografado: senha incorreta'); }
+        else {
+          const rsaAsn1 = forge.asn1.fromDer(pkInfo.value[2].value);
+          return forge.pki.privateKeyFromAsn1(rsaAsn1);
+        }
+      }
+    } catch(e){ errors.push('PKCS8-enc: ' + e.message); }
+
+    throw new Error('Não foi possível carregar a chave privada.\n' + errors.join('\n'));
+  }
+
+  // ---------- parse PFX ----------
+  $('btnParsePfx').addEventListener('click', async () => {
+    const msgEl = $('sourceMsg'); clearMsg(msgEl);
+    const file = $('pfxFile').files[0];
+    if(!file){ showMsg(msgEl, 'Selecione um arquivo .pfx ou .p12.', 'error'); return; }
+    const password = $('pfxPassword').value;
+    try{
+      const buf = await readFileAsArrayBuffer(file);
+      const der = forge.util.createBuffer(ab2binstr(buf));
+      const asn1 = forge.asn1.fromDer(der);
+      const p12 = forge.pkcs12.pkcs12FromAsn1(asn1, password);
+
+      const certBagsRes = p12.getBags({bagType: forge.pki.oids.certBag});
+      const certBags = certBagsRes[forge.pki.oids.certBag] || [];
+      let keyBags = (p12.getBags({bagType: forge.pki.oids.pkcs8ShroudedKeyBag})[forge.pki.oids.pkcs8ShroudedKeyBag]) || [];
+      if(keyBags.length === 0){
+        keyBags = (p12.getBags({bagType: forge.pki.oids.keyBag})[forge.pki.oids.keyBag]) || [];
+      }
+
+      if(certBags.length === 0) throw new Error('Nenhum certificado encontrado dentro do PFX.');
+
+      parsedCerts = certBags.map((b, i) => ({
+        cert: b.cert,
+        alias: (b.attributes && b.attributes.friendlyName && b.attributes.friendlyName[0]) || ('cert' + i),
+      }));
+      parsedKey = keyBags.length ? keyBags[0].key : null;
+
+      renderDetected();
+      showMsg(msgEl, 'Certificado lido com sucesso: ' + certBags.length + ' certificado(s)' + (parsedKey ? ' + chave privada' : ' (sem chave privada)') + '.', 'success');
+    }catch(e){
+      showMsg(msgEl, 'Erro ao ler o PFX/P12 — verifique a senha ou o arquivo.\n' + e.message, 'error');
+      $('panelDetected').classList.add('hidden');
+      $('panelOutput').classList.add('hidden');
+    }
+  });
+
+  // ---------- parse PEM/CRT (+ optional key) ----------
+  $('btnParsePem').addEventListener('click', async () => {
+    const msgEl = $('sourceMsg'); clearMsg(msgEl);
+    const certFile = $('certFile').files[0];
+    if(!certFile){ showMsg(msgEl, 'Selecione um arquivo de certificado.', 'error'); return; }
+    try{
+      let certs = [];
+      const text = await readFileAsText(certFile);
+      if(/-----BEGIN CERTIFICATE-----/.test(text)){
+        const blocks = text.match(/-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g) || [];
+        certs = blocks.map(b => forge.pki.certificateFromPem(b));
+      } else {
+        const buf = await readFileAsArrayBuffer(certFile);
+        const asn1 = forge.asn1.fromDer(ab2binstr(buf));
+        certs = [forge.pki.certificateFromAsn1(asn1)];
+      }
+      if(certs.length === 0) throw new Error('Nenhum certificado válido encontrado no arquivo.');
+
+      parsedCerts = certs.map((c,i)=>({cert:c, alias:'cert'+i}));
+      parsedKey = null;
+
+      const keyFile = $('keyFile').files[0];
+      if(keyFile){
+        const keyText = await readFileAsText(keyFile);
+        const keyPw = $('keyPassword').value;
+        parsedKey = loadPrivateKey(keyText, keyPw);
+      }
+
+      renderDetected();
+      showMsg(msgEl, 'Certificado lido com sucesso: ' + certs.length + ' certificado(s)' + (parsedKey ? ' + chave privada' : '') + '.', 'success');
+    }catch(e){
+      showMsg(msgEl, 'Erro ao ler o certificado.\n' + e.message, 'error');
+      $('panelDetected').classList.add('hidden');
+      $('panelOutput').classList.add('hidden');
+    }
+  });
+
+  // ---------- render detected certs ----------
+  function renderDetected(){
+    const leafIdx = guessLeafIndex(parsedCerts);
+    const list = $('certList');
+    list.innerHTML = '';
+    parsedCerts.forEach((item, i) => {
+      item.isLeaf = (i === leafIdx);
+      item.include = true;
+      const info = certInfo(item.cert);
+      const card = document.createElement('div');
+      card.className = 'cert-card';
+      card.innerHTML = `
+        <div class="top">
+          <label>
+            <input type="checkbox" data-idx="${i}" class="chk-include" checked>
+            ${info.subject.split(',')[0] || 'Certificado ' + (i+1)}
+            ${item.isLeaf ? '<span class="badge leaf">leaf</span>' : ''}
+            ${parsedKey && item.isLeaf ? '<span class="badge key">chave privada</span>' : ''}
+          </label>
+          <label style="margin:0;display:flex;align-items:center;gap:6px;">
+            <input type="radio" name="leafRadio" data-idx="${i}" class="rad-leaf" ${item.isLeaf ? 'checked':''}>
+            <span style="font-size:11px;">definir como leaf</span>
+          </label>
+        </div>
+        <div class="cert-meta">
+          subject: ${info.subject}<br>
+          issuer:  ${info.issuer}<br>
+          válido:  ${info.validFrom} → ${info.validTo}<br>
+          serial:  ${info.serial}
+        </div>`;
+      list.appendChild(card);
+    });
+
+    list.querySelectorAll('.chk-include').forEach(chk=>{
+      chk.addEventListener('change', e=>{
+        parsedCerts[+e.target.dataset.idx].include = e.target.checked;
+      });
+    });
+    list.querySelectorAll('.rad-leaf').forEach(rad=>{
+      rad.addEventListener('change', e=>{
+        parsedCerts.forEach((c,i)=> c.isLeaf = (i === +e.target.dataset.idx));
+        renderDetected();
+      });
+    });
+
+    $('panelDetected').classList.remove('hidden');
+    $('panelOutput').classList.remove('hidden');
+    updateConvertEnabled();
+  }
+
+  // ---------- output format selection ----------
+  document.querySelectorAll('.fmt-card').forEach(card=>{
+    card.addEventListener('click', ()=>{
+      document.querySelectorAll('.fmt-card').forEach(c=>c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedFmt = card.dataset.fmt;
+      $('optsPem').classList.toggle('hidden', selectedFmt !== 'pem');
+      $('optsPfx').classList.toggle('hidden', selectedFmt !== 'pfx');
+      $('optsJks').classList.toggle('hidden', selectedFmt !== 'jks');
+      $('optsKey').classList.toggle('hidden', selectedFmt !== 'key');
+      updateConvertEnabled();
+    });
+  });
+
+  function updateConvertEnabled(){
+    $('btnConvert').disabled = !selectedFmt || parsedCerts.length === 0;
+  }
+
+  // ---------- builders ----------
+  function leafCert(){
+    const leaf = parsedCerts.find(c=>c.isLeaf) || parsedCerts[0];
+    return leaf.cert;
+  }
+  function selectedCertsOrdered(){
+    const included = parsedCerts.filter(c=>c.include);
+    const leaf = included.filter(c=>c.isLeaf);
+    const rest = included.filter(c=>!c.isLeaf);
+    return leaf.concat(rest).map(c=>c.cert);
+  }
+
+  function toPkcs8Pem(key){
+    const rsaAsn1 = forge.pki.privateKeyToAsn1(key);
+    const pkcs8Asn1 = forge.pki.wrapRsaPrivateKey(rsaAsn1);
+    return forge.pki.privateKeyInfoToPem(pkcs8Asn1);
+  }
+
+  function buildPemOutput(){
+    let out = '';
+    selectedCertsOrdered().forEach(c => { out += forge.pki.certificateToPem(c) + '\n'; });
+    const includeKey = $('pemIncludeKey').checked;
+    if(includeKey && parsedKey){
+      const fmt = $('pemKeyFormat').value;
+      out += (fmt === 'pkcs8' ? toPkcs8Pem(parsedKey) : forge.pki.privateKeyToPem(parsedKey)) + '\n';
+    } else if(includeKey && !parsedKey){
+      throw new Error('Nenhuma chave privada disponível para incluir.');
+    }
+    downloadText(out, 'certificado.pem');
+  }
+
+  function buildCrtOutput(variant, filename){
+    const cert = leafCert();
+    filename = filename || 'certificado.crt';
+    if(variant === 'der'){
+      const derBin = forge.asn1.toDer(forge.pki.certificateToAsn1(cert)).getBytes();
+      downloadBinary(derBin, filename, 'application/x-x509-ca-cert');
+    } else {
+      downloadText(forge.pki.certificateToPem(cert), filename);
+    }
+  }
+
+  function buildKeyOutput(){
+    if(!parsedKey) throw new Error('É necessária uma chave privada carregada na etapa 1 para exportar um .KEY.');
+    const password = $('keyOutPassword').value;
+    const fmt = $('keyOutFormat').value;
+    if(password){
+      const pkcs8Asn1 = forge.pki.wrapRsaPrivateKey(forge.pki.privateKeyToAsn1(parsedKey));
+      const encAsn1 = forge.pki.encryptPrivateKeyInfo(pkcs8Asn1, password, {algorithm:'aes256'});
+      downloadText(forge.pki.encryptedPrivateKeyToPem(encAsn1), 'chave.key');
+    } else {
+      const out = (fmt === 'pkcs8') ? toPkcs8Pem(parsedKey) : forge.pki.privateKeyToPem(parsedKey);
+      downloadText(out, 'chave.key');
+    }
+  }
+
+  function buildPfxOutput(){
+    if(!parsedKey) throw new Error('É necessária uma chave privada carregada na etapa 1 para gerar um PFX/P12.');
+    const password = $('pfxOutPassword').value;
+    if(!password) throw new Error('Defina uma senha para o arquivo PFX de saída.');
+    const alias = $('pfxOutAlias').value || 'certificado';
+    const certChain = selectedCertsOrdered();
+    const asn1 = forge.pkcs12.toPkcs12Asn1(parsedKey, certChain, password, {algorithm:'3des', friendlyName: alias});
+    const derBin = forge.asn1.toDer(asn1).getBytes();
+    downloadBinary(derBin, 'certificado.pfx', 'application/x-pkcs12');
+  }
+
+  // ---- JKS truststore writer (TrustedCertEntry only) ----
+  function ByteWriter(){ this.bytes = []; }
+  ByteWriter.prototype.u8 = function(b){ this.bytes.push(b & 0xFF); };
+  ByteWriter.prototype.u32 = function(n){
+    this.u8((n>>>24)&0xFF); this.u8((n>>>16)&0xFF); this.u8((n>>>8)&0xFF); this.u8(n&0xFF);
+  };
+  ByteWriter.prototype.u64 = function(n){
+    const high = Math.floor(n / 4294967296);
+    const low = n - high * 4294967296;
+    this.u32(high); this.u32(low >>> 0);
+  };
+  ByteWriter.prototype.utf = function(str){
+    const bytes = new TextEncoder().encode(str);
+    this.u8((bytes.length>>8)&0xFF); this.u8(bytes.length&0xFF);
+    bytes.forEach(b=>this.u8(b));
+  };
+  ByteWriter.prototype.raw = function(u8arr){ for(let i=0;i<u8arr.length;i++) this.u8(u8arr[i]); };
+  ByteWriter.prototype.toUint8Array = function(){ return new Uint8Array(this.bytes); };
+
+  function buildJksBytes(entries, password){
+    const w = new ByteWriter();
+    w.u32(0xFEEDFEED);
+    w.u32(0x00000002);
+    w.u32(entries.length);
+    entries.forEach(e=>{
+      w.u32(2); // trusted cert tag
+      w.utf(e.alias);
+      w.u64(Date.now());
+      w.utf('X.509');
+      const certDerBin = forge.asn1.toDer(forge.pki.certificateToAsn1(e.cert)).getBytes();
+      const certDerBytes = binStrToUint8(certDerBin);
+      w.u32(certDerBytes.length);
+      w.raw(certDerBytes);
+    });
+    const body = w.toUint8Array();
+
+    // integrity digest = SHA1( password(UTF-16BE) + "Mighty Aphrodite"(UTF-8) + body )
+    const pwBytes = [];
+    for(const ch of password){ const code = ch.charCodeAt(0); pwBytes.push((code>>8)&0xFF, code&0xFF); }
+    const seed = new TextEncoder().encode('Mighty Aphrodite');
+    const md = forge.md.sha1.create();
+    md.update(uint8ToBinStr(new Uint8Array(pwBytes)));
+    md.update(uint8ToBinStr(seed));
+    md.update(uint8ToBinStr(body));
+    const digestBytes = binStrToUint8(md.digest().getBytes());
+
+    const final = new Uint8Array(body.length + digestBytes.length);
+    final.set(body, 0);
+    final.set(digestBytes, body.length);
+    return final;
+  }
+
+  function buildJksOutput(){
+    const password = $('jksOutPassword').value;
+    if(!password) throw new Error('Defina uma senha para o keystore JKS.');
+    const aliasBase = ($('jksOutAlias').value || 'certificado').toLowerCase().replace(/\s+/g,'-');
+    const included = parsedCerts.filter(c=>c.include);
+    if(included.length === 0) throw new Error('Nenhum certificado selecionado.');
+    const entries = included.map((c,i)=>({alias: aliasBase + (included.length>1 ? '-' + (i+1) : ''), cert: c.cert}));
+    const bytes = buildJksBytes(entries, password);
+    downloadBinary(bytes, 'truststore.jks', 'application/octet-stream');
+  }
+
+  // ---------- convert button ----------
+  $('btnConvert').addEventListener('click', () => {
+    const msgEl = $('outputMsg'); clearMsg(msgEl);
+    try{
+      switch(selectedFmt){
+        case 'pem': buildPemOutput(); break;
+        case 'crt-pem': buildCrtOutput('pem', 'certificado.crt'); break;
+        case 'crt-der': buildCrtOutput('der', 'certificado.crt'); break;
+        case 'cer-pem': buildCrtOutput('pem', 'certificado.cer'); break;
+        case 'cer-der': buildCrtOutput('der', 'certificado.cer'); break;
+        case 'pfx': buildPfxOutput(); break;
+        case 'jks': buildJksOutput(); break;
+        case 'key': buildKeyOutput(); break;
+        default: throw new Error('Selecione um formato de saída.');
+      }
+      showMsg(msgEl, 'Arquivo gerado e baixado com sucesso.', 'success');
+    }catch(e){
+      showMsg(msgEl, e.message, 'error');
+    }
+  });
+})();
+</script>
+</body>
+</html>
