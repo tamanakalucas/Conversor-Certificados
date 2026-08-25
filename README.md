@@ -2,6 +2,8 @@
 
 Site estático que reúne, em uma única interface, o **conversor de certificados** (PFX/P12 ↔ PEM, CRT, CER, KEY, JKS) e a **geração de CSR + chave privada**, além de um inspetor de certificados.
 
+A interface segue o **Material Design 3**: tokens de cor gerados a partir do teal da marca, escala tipográfica e de forma do M3, campos outlined com label flutuante, tabs primárias, segmented buttons, chips, switches e snackbar. Tema claro e escuro com alternância no cabeçalho (a preferência fica salva no navegador).
+
 Tudo roda **no navegador do usuário**. Não há servidor, backend nem banco de dados: chaves, certificados e senhas nunca saem da máquina. Por isso os arquivos gerados são baixados na hora — não ficam salvos em lugar nenhum.
 
 ## As três abas
@@ -16,7 +18,7 @@ Fluxo em três etapas, o mesmo de antes, com melhorias:
 
 ### 2. Gerar CSR + chave
 - Subject completo (CN, O, OU, L, ST, C, e-mail) com os tipos ASN.1 corretos (`C` como PrintableString, e-mail como IA5String).
-- SAN com detecção automática de DNS, IP, e-mail e URI (um por linha); o CN entra automaticamente.
+- SAN em chips, com detecção automática de DNS, IP, e-mail e URI; o CN entra automaticamente.
 - **Importação de arquivo `.cnf` do OpenSSL** — veja abaixo.
 - RSA 2048/3072/4096, assinatura SHA-256/384/512, chave em PKCS#8 ou PKCS#1, opcionalmente cifrada com AES-256.
 - Download do `.csr` e do `.key`, CSR decodificado na tela e comando OpenSSL equivalente.
@@ -25,6 +27,16 @@ Fluxo em três etapas, o mesmo de antes, com melhorias:
 
 ### 3. Inspecionar
 Decodifica certificado, cadeia, CSR ou chave: subject, emissor, validade com alerta de expiração, SAN, tamanho da chave, serial e fingerprint SHA-256.
+
+## Detalhes de usabilidade
+
+- **Áreas de arrastar e soltar** no lugar dos campos de arquivo nativos, com nome do arquivo e botão de remover depois da seleção.
+- **SAN por chips**: digite e pressione Enter; o tipo (DNS, IP, email, URI) é detectado e mostrado em cada chip. Colar uma lista separada por vírgula ou quebra de linha cria vários de uma vez. O CN aparece como chip fixo, deixando claro que entra no CSR automaticamente.
+- **Erros no campo certo**: campo obrigatório em branco ou país inválido destacam o próprio campo, além da mensagem.
+- **Snackbar** confirma download, cópia e troca de tema sem empurrar o conteúdo da página.
+- **Barra de progresso** durante a geração da chave, com o tamanho em bits no próprio botão.
+- **Botão Recomeçar** no conversor limpa arquivos, senhas e seleções de uma vez.
+- Alvos de toque de 40–48px, foco visível em tudo navegável por teclado, e role/aria-selected nas tabs e nos cartões de formato.
 
 ## Importar dados de um arquivo `.cnf`
 
@@ -93,7 +105,7 @@ npx http-server . -p 4173
 .
 ├── index.html              # header, 3 abas e os painéis
 ├── assets/
-│   ├── styles.css          # identidade visual (tema escuro teal, IBM Plex Mono + Inter)
+│   ├── styles.css          # tokens e componentes Material Design 3 (tema claro + escuro)
 │   └── app.js              # toda a lógica, sem build
 ├── vendor/
 │   ├── forge.min.js        # node-forge 1.4.0 (BSD/GPL) — RSA, PKCS#10, PKCS#12, PKCS#7
@@ -102,7 +114,7 @@ npx http-server . -p 4173
 └── .nojekyll
 ```
 
-O node-forge é servido localmente (versão 1.4.0, mais recente que a 1.3.1 do CDN usada antes): o site funciona offline depois de carregado e não faz nenhuma requisição de rede além da fonte do Google Fonts, que tem fallback para as fontes do sistema.
+O node-forge é servido localmente (versão 1.4.0, mais recente que a 1.3.1 do CDN usada antes): o site funciona offline depois de carregado e não faz nenhuma requisição de rede além das fontes do Google Fonts (Roboto na interface, IBM Plex Mono em PEM e comandos), ambas com fallback para as fontes do sistema. Os ícones são SVG inline — sem biblioteca externa.
 
 ## Limitações
 

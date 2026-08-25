@@ -4,391 +4,563 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Gere CSR e chave privada e converta certificados entre PFX/P12, PEM, CRT, CER, KEY e JKS inteiramente no navegador — nenhum arquivo é enviado a um servidor.">
+<meta name="theme-color" content="#0C121A">
 <title>Central de Certificados</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%230a0f1c'/%3E%3Ccircle cx='50' cy='50' r='30' fill='none' stroke='%232dd4bf' stroke-width='6'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%230C121A'/%3E%3Ccircle cx='50' cy='50' r='30' fill='none' stroke='%235BDBC7' stroke-width='6'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
-<div class="wrap">
 
-  <header>
-    <div class="eyebrow">Ferramenta local de certificados</div>
-    <h1>Central de Certificados</h1>
-    <p class="sub">Gere CSR e chave privada, converta entre PFX/P12, PEM, CRT, CER, KEY e JKS e inspecione o que já tem em mãos — tudo diretamente no navegador.</p>
+<!-- ícones (sprite inline, sem dependência externa) -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <defs>
+    <g id="i-convert"><path d="M4 8h13l-3-3m3 3l-3 3M20 16H7l3-3m-3 3l3 3"/></g>
+    <g id="i-key"><circle cx="8" cy="12" r="3.2"/><path d="M11.2 12H20m-3 0v3m-3-3v2"/></g>
+    <g id="i-search"><circle cx="11" cy="11" r="6"/><path d="M15.5 15.5L20 20"/></g>
+    <g id="i-upload"><path d="M12 16V4m0 0L8 8m4-4l4 4M4 16v2.5A1.5 1.5 0 005.5 20h13a1.5 1.5 0 001.5-1.5V16"/></g>
+    <g id="i-download"><path d="M12 4v12m0 0l-4-4m4 4l4-4M4 16v2.5A1.5 1.5 0 005.5 20h13a1.5 1.5 0 001.5-1.5V16"/></g>
+    <g id="i-copy"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 012-2h8"/></g>
+    <g id="i-eye"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></g>
+    <g id="i-eye-off"><path d="M4 4l16 16M9.9 5.9A9.5 9.5 0 0112 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 01-3.3 4M6.3 8.2A17 17 0 002.5 12S6 18.5 12 18.5a9.6 9.6 0 003.2-.55"/><path d="M9.6 9.8a3 3 0 004.3 4.2"/></g>
+    <g id="i-check"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.3l2.4 2.4 4.6-4.9"/></g>
+    <g id="i-error"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.8v5m0 3.2v.2"/></g>
+    <g id="i-warn"><path d="M12 4.2L2.8 19.5h18.4L12 4.2z"/><path d="M12 10v4m0 2.6v.2"/></g>
+    <g id="i-info"><circle cx="12" cy="12" r="8.5"/><path d="M12 11.5v5M12 8v.2"/></g>
+    <g id="i-close"><path d="M6 6l12 12M18 6L6 18"/></g>
+    <g id="i-sun"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4"/></g>
+    <g id="i-moon"><path d="M20 13.4A8.2 8.2 0 1110.6 4a6.8 6.8 0 009.4 9.4z"/></g>
+    <g id="i-lock"><rect x="4.5" y="10" width="15" height="10" rx="2.5"/><path d="M8 10V7.5a4 4 0 018 0V10"/></g>
+    <g id="i-file"><path d="M13 3.5H7.5A1.5 1.5 0 006 5v14a1.5 1.5 0 001.5 1.5h9A1.5 1.5 0 0018 19V8.5L13 3.5z"/><path d="M13 3.5V8.5H18"/></g>
+    <g id="i-trash"><path d="M5 7h14M10 7V5.5A1.5 1.5 0 0111.5 4h1A1.5 1.5 0 0114 5.5V7M6.5 7l.8 12A1.5 1.5 0 008.8 20.4h6.4a1.5 1.5 0 001.5-1.4l.8-12"/></g>
+    <g id="i-arrow-right"><path d="M4 12h15m0 0l-5-5m5 5l-5 5"/></g>
+    <g id="i-plus"><path d="M12 5v14M5 12h14"/></g>
+    <g id="i-refresh"><path d="M20 12a8 8 0 10-2.6 5.9M20 18v-5h-5"/></g>
+  </defs>
+</svg>
 
-    <svg class="chain-diagram" viewBox="0 0 820 90" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <line x1="60" y1="45" x2="690" y2="45" stroke="#1f2c45" stroke-width="2" stroke-dasharray="3 6"/>
-      <circle cx="60" cy="45" r="22" fill="#111a2c" stroke="#2dd4bf" stroke-width="1.5"/>
-      <circle cx="270" cy="45" r="22" fill="#111a2c" stroke="#2dd4bf" stroke-width="1.5"/>
-      <circle cx="480" cy="45" r="22" fill="#111a2c" stroke="#2dd4bf" stroke-width="1.5"/>
-      <circle cx="690" cy="45" r="22" fill="#111a2c" stroke="#2dd4bf" stroke-width="1.5"/>
-      <text x="60" y="50" text-anchor="middle" class="chain-node-label active" font-weight="600">CSR</text>
-      <text x="270" y="50" text-anchor="middle" class="chain-node-label active" font-weight="600">CRT</text>
-      <text x="480" y="50" text-anchor="middle" class="chain-node-label active" font-weight="600">PFX</text>
-      <text x="690" y="50" text-anchor="middle" class="chain-node-label active" font-weight="600">PEM</text>
-      <circle r="4" fill="#2dd4bf" class="chain-dot" style="offset-path: path('M 60 45 L 270 45 L 480 45 L 690 45');"></circle>
+<header class="app-bar">
+  <div class="app-bar-inner">
+    <span class="app-bar-avatar"><svg class="icon" viewBox="0 0 24 24"><use href="#i-lock"/></svg></span>
+    <div class="app-bar-headings">
+      <h1>Central de Certificados</h1>
+      <p>Gere, converta e inspecione certificados sem sair do navegador</p>
+    </div>
+    <button class="icon-button" id="themeToggle" type="button" aria-label="Alternar tema claro/escuro">
+      <svg class="icon icon-dark" viewBox="0 0 24 24"><use href="#i-sun"/></svg>
+      <svg class="icon icon-light" viewBox="0 0 24 24"><use href="#i-moon"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="conteudo">
+
+  <section class="hero">
+    <svg class="chain" viewBox="0 0 820 74" aria-hidden="true">
+      <line x1="60" y1="37" x2="690" y2="37" stroke="currentColor" stroke-width="2" stroke-dasharray="3 7" opacity=".35"/>
+      <g class="chain-node"><circle cx="60"  cy="37" r="21"/><text x="60"  y="41" text-anchor="middle">CSR</text></g>
+      <g class="chain-node"><circle cx="270" cy="37" r="21"/><text x="270" y="41" text-anchor="middle">CRT</text></g>
+      <g class="chain-node"><circle cx="480" cy="37" r="21"/><text x="480" y="41" text-anchor="middle">PFX</text></g>
+      <g class="chain-node"><circle cx="690" cy="37" r="21"/><text x="690" y="41" text-anchor="middle">PEM</text></g>
+      <circle r="4" class="chain-dot" style="offset-path: path('M 84 37 L 270 37 L 480 37 L 666 37');"></circle>
     </svg>
 
-    <div class="privacy-note">
-      <span>🔒</span>
-      <div><b>Tudo roda localmente.</b> Geração de chaves e conversão acontecem inteiramente no seu navegador com a biblioteca node-forge — nenhum arquivo, senha ou chave privada é enviado para qualquer servidor.</div>
+    <div class="banner">
+      <svg class="icon" viewBox="0 0 24 24"><use href="#i-lock"/></svg>
+      <p><b>Tudo roda localmente.</b> A geração de chaves e a conversão acontecem inteiramente no seu navegador com a biblioteca node-forge — nenhum arquivo, senha ou chave privada é enviado para qualquer servidor.</p>
     </div>
-  </header>
+  </section>
 
-  <nav class="modes" role="tablist">
-    <button class="mode-btn active" data-mode="convert" role="tab">Converter</button>
-    <button class="mode-btn" data-mode="csr" role="tab">Gerar CSR + chave</button>
-    <button class="mode-btn" data-mode="inspect" role="tab">Inspecionar</button>
+  <nav class="tabs" role="tablist" aria-label="Seções">
+    <button class="tab active" role="tab" aria-selected="true" aria-controls="mode-convert" id="tabbtn-convert" data-mode="convert">
+      <svg class="icon" viewBox="0 0 24 24"><use href="#i-convert"/></svg><span>Converter</span>
+    </button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="mode-csr" id="tabbtn-csr" data-mode="csr">
+      <svg class="icon" viewBox="0 0 24 24"><use href="#i-key"/></svg><span>Gerar CSR</span>
+    </button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="mode-inspect" id="tabbtn-inspect" data-mode="inspect">
+      <svg class="icon" viewBox="0 0 24 24"><use href="#i-search"/></svg><span>Inspecionar</span>
+    </button>
   </nav>
 
-  <!-- ══════════════════════════ MODO: CONVERTER ══════════════════════════ -->
-  <section class="mode-pane active" id="mode-convert" role="tabpanel">
+  <!-- ══════════════════════════ CONVERTER ══════════════════════════ -->
+  <section class="pane active" id="mode-convert" role="tabpanel" aria-labelledby="tabbtn-convert" tabindex="0">
 
-    <!-- STEP 1: SOURCE -->
-    <div class="panel">
-      <h2><span class="num">1</span>Carregar certificado de origem</h2>
-      <p class="desc">Escolha como seu certificado está empacotado hoje.</p>
+    <article class="card step" id="stepSource">
+      <header class="step-head">
+        <span class="step-num">1</span>
+        <div>
+          <h2>Carregar certificado de origem</h2>
+          <p class="step-sub">Escolha como seu certificado está empacotado hoje.</p>
+        </div>
+      </header>
 
-      <div class="tabs">
-        <button class="tab-btn active" data-tab="pfx">PFX / P12</button>
-        <button class="tab-btn" data-tab="pem">PEM / CRT (+ chave opcional)</button>
+      <div class="segmented" role="tablist" aria-label="Tipo de origem">
+        <button class="segment active" role="tab" aria-selected="true" data-seg="src" data-target="src-pfx">PFX / P12</button>
+        <button class="segment" role="tab" aria-selected="false" data-seg="src" data-target="src-pem">PEM / CRT + chave</button>
       </div>
 
-      <div class="tab-pane active" id="tab-pfx">
-        <div class="row">
-          <div class="field">
-            <label>Arquivo .pfx ou .p12</label>
-            <input type="file" id="pfxFile" accept=".pfx,.p12">
-          </div>
-          <div class="field">
-            <label>Senha do arquivo</label>
-            <input type="password" id="pfxPassword" placeholder="senha de importação">
+      <div class="seg-pane active" id="src-pfx">
+        <div class="dropzone" id="dropPfx" tabindex="0" role="button" aria-label="Selecionar arquivo PFX ou P12">
+          <input type="file" id="pfxFile" accept=".pfx,.p12" hidden>
+          <svg class="icon dz-icon" viewBox="0 0 24 24"><use href="#i-upload"/></svg>
+          <p class="dz-title">Arraste o arquivo <b>.pfx</b> ou <b>.p12</b></p>
+          <p class="dz-sub">ou clique para escolher no computador</p>
+        </div>
+        <div class="grid-2">
+          <div class="tf">
+            <input type="password" id="pfxPassword" placeholder=" " autocomplete="off">
+            <label for="pfxPassword">Senha do arquivo</label>
+            <button class="tf-trailing" type="button" data-pw="pfxPassword" aria-label="Mostrar senha">
+              <svg class="icon" viewBox="0 0 24 24"><use href="#i-eye"/></svg>
+            </button>
           </div>
         </div>
-        <button class="action" id="btnParsePfx">Ler certificado</button>
+        <div class="actions">
+          <button class="btn filled" id="btnParsePfx" type="button">
+            <svg class="icon" viewBox="0 0 24 24"><use href="#i-file"/></svg>Ler certificado
+          </button>
+        </div>
       </div>
 
-      <div class="tab-pane" id="tab-pem">
-        <div class="row">
-          <div class="field">
-            <label>Certificado (.pem / .crt / .cer / .der)</label>
-            <input type="file" id="certFile" accept=".pem,.crt,.cer,.cert,.der">
+      <div class="seg-pane" id="src-pem">
+        <div class="grid-2">
+          <div class="dropzone" id="dropCert" tabindex="0" role="button" aria-label="Selecionar certificado">
+            <input type="file" id="certFile" accept=".pem,.crt,.cer,.cert,.der" hidden>
+            <svg class="icon dz-icon" viewBox="0 0 24 24"><use href="#i-upload"/></svg>
+            <p class="dz-title">Certificado <span class="req">*</span></p>
+            <p class="dz-sub">.pem · .crt · .cer · .der</p>
           </div>
-          <div class="field">
-            <label>Chave privada (.key / .pem) — opcional</label>
-            <input type="file" id="keyFile" accept=".key,.pem,.der">
-          </div>
-        </div>
-        <div class="row">
-          <div class="field">
-            <label>Cadeia / CA intermediária (.crt / .pem / .p7b) — opcional</label>
-            <input type="file" id="chainFile" accept=".crt,.cer,.pem,.p7b" multiple>
-          </div>
-          <div class="field">
-            <label>Senha da chave (se criptografada)</label>
-            <input type="password" id="keyPassword" placeholder="opcional">
+          <div class="dropzone" id="dropKey" tabindex="0" role="button" aria-label="Selecionar chave privada">
+            <input type="file" id="keyFile" accept=".key,.pem,.der" hidden>
+            <svg class="icon dz-icon" viewBox="0 0 24 24"><use href="#i-key"/></svg>
+            <p class="dz-title">Chave privada</p>
+            <p class="dz-sub">opcional · .key · .pem</p>
           </div>
         </div>
-        <label class="inline-check hidden" id="useSessionKeyWrap">
-          <input type="checkbox" id="useSessionKey"> Usar a chave gerada agora na aba <b>Gerar CSR</b> (<span id="sessionKeyName"></span>)
+        <div class="dropzone" id="dropChain" tabindex="0" role="button" aria-label="Selecionar cadeia intermediária">
+          <input type="file" id="chainFile" accept=".crt,.cer,.pem,.p7b" multiple hidden>
+          <svg class="icon dz-icon" viewBox="0 0 24 24"><use href="#i-file"/></svg>
+          <p class="dz-title">Cadeia / CA intermediária</p>
+          <p class="dz-sub">opcional · aceita vários arquivos · .crt · .pem · .p7b</p>
+        </div>
+
+        <div class="grid-2">
+          <div class="tf">
+            <input type="password" id="keyPassword" placeholder=" " autocomplete="off">
+            <label for="keyPassword">Senha da chave</label>
+            <button class="tf-trailing" type="button" data-pw="keyPassword" aria-label="Mostrar senha">
+              <svg class="icon" viewBox="0 0 24 24"><use href="#i-eye"/></svg>
+            </button>
+            <p class="supporting">Só se a chave estiver criptografada.</p>
+          </div>
+        </div>
+
+        <label class="switch-row hidden" id="useSessionKeyWrap">
+          <span class="switch"><input type="checkbox" id="useSessionKey"><span class="track"><span class="thumb"></span></span></span>
+          <span class="switch-label">Usar a chave gerada agora na aba <b>Gerar CSR</b><small id="sessionKeyName"></small></span>
         </label>
-        <button class="action" id="btnParsePem">Ler certificado</button>
+
+        <div class="actions">
+          <button class="btn filled" id="btnParsePem" type="button">
+            <svg class="icon" viewBox="0 0 24 24"><use href="#i-file"/></svg>Ler certificado
+          </button>
+        </div>
       </div>
 
-      <div class="msg" id="sourceMsg"></div>
-    </div>
+      <div class="msg" id="sourceMsg" role="status"></div>
+    </article>
 
-    <!-- STEP 2: DETECTED CONTENT -->
-    <div class="panel hidden" id="panelDetected">
-      <h2><span class="num">2</span>Conteúdo detectado</h2>
-      <p class="desc">Marque qual certificado é o principal (leaf) e quais entram na cadeia exportada.</p>
-      <div id="certList"></div>
-      <div class="msg" id="pairMsg"></div>
-    </div>
+    <article class="card step hidden" id="panelDetected">
+      <header class="step-head">
+        <span class="step-num">2</span>
+        <div>
+          <h2>Conteúdo detectado</h2>
+          <p class="step-sub">Marque qual certificado é o principal (leaf) e quais entram na cadeia exportada.</p>
+        </div>
+      </header>
+      <div id="certList" class="cert-list"></div>
+      <div class="msg" id="pairMsg" role="status"></div>
+    </article>
 
-    <!-- STEP 3: OUTPUT -->
-    <div class="panel hidden" id="panelOutput">
-      <h2><span class="num">3</span>Formato de saída</h2>
-      <div class="fmt-grid" id="fmtGrid">
-        <div class="fmt-card" data-fmt="pem"><div class="ext">.PEM</div><div class="ext-desc">Texto Base64, cadeia + chave opcional</div></div>
-        <div class="fmt-card" data-fmt="crt-pem"><div class="ext">.CRT</div><div class="ext-desc">Certificado único, texto Base64</div></div>
-        <div class="fmt-card" data-fmt="crt-der"><div class="ext">.CRT (DER)</div><div class="ext-desc">Certificado único, binário</div></div>
-        <div class="fmt-card" data-fmt="cer-pem"><div class="ext">.CER</div><div class="ext-desc">Certificado único, texto Base64</div></div>
-        <div class="fmt-card" data-fmt="cer-der"><div class="ext">.CER (DER)</div><div class="ext-desc">Certificado único, binário</div></div>
-        <div class="fmt-card" data-fmt="pfx"><div class="ext">.PFX / .P12</div><div class="ext-desc">Pacote com chave privada protegido por senha</div></div>
-        <div class="fmt-card" data-fmt="jks"><div class="ext">.JKS</div><div class="ext-desc">Truststore Java (apenas certificados)</div></div>
-        <div class="fmt-card" data-fmt="key"><div class="ext">.KEY</div><div class="ext-desc">Somente a chave privada</div></div>
+    <article class="card step hidden" id="panelOutput">
+      <header class="step-head">
+        <span class="step-num">3</span>
+        <div>
+          <h2>Formato de saída</h2>
+          <p class="step-sub">Escolha o formato e ajuste as opções antes de baixar.</p>
+        </div>
+      </header>
+
+      <div class="fmt-grid" id="fmtGrid" role="radiogroup" aria-label="Formato de saída">
+        <button class="fmt" role="radio" aria-checked="false" data-fmt="pem" type="button"><span class="fmt-ext">.PEM</span><span class="fmt-desc">Texto Base64, cadeia + chave opcional</span></button>
+        <button class="fmt" role="radio" aria-checked="false" data-fmt="crt-pem" type="button"><span class="fmt-ext">.CRT</span><span class="fmt-desc">Certificado único, texto Base64</span></button>
+        <button class="fmt" role="radio" aria-checked="false" data-fmt="crt-der" type="button"><span class="fmt-ext">.CRT · DER</span><span class="fmt-desc">Certificado único, binário</span></button>
+        <button class="fmt" role="radio" aria-checked="false" data-fmt="cer-pem" type="button"><span class="fmt-ext">.CER</span><span class="fmt-desc">Certificado único, texto Base64</span></button>
+        <button class="fmt" role="radio" aria-checked="false" data-fmt="cer-der" type="button"><span class="fmt-ext">.CER · DER</span><span class="fmt-desc">Certificado único, binário</span></button>
+        <button class="fmt" role="radio" aria-checked="false" data-fmt="pfx" type="button"><span class="fmt-ext">.PFX / .P12</span><span class="fmt-desc">Pacote com chave privada e senha</span></button>
+        <button class="fmt" role="radio" aria-checked="false" data-fmt="jks" type="button"><span class="fmt-ext">.JKS</span><span class="fmt-desc">Truststore Java (só certificados)</span></button>
+        <button class="fmt" role="radio" aria-checked="false" data-fmt="key" type="button"><span class="fmt-ext">.KEY</span><span class="fmt-desc">Somente a chave privada</span></button>
       </div>
 
       <div class="opts hidden" id="optsPem">
-        <div class="row">
-          <div class="field">
-            <label class="inline-check"><input type="checkbox" id="pemIncludeKey" checked> Incluir chave privada (se disponível)</label>
-          </div>
-          <div class="field">
-            <label>Formato da chave</label>
+        <label class="switch-row">
+          <span class="switch"><input type="checkbox" id="pemIncludeKey" checked><span class="track"><span class="thumb"></span></span></span>
+          <span class="switch-label">Incluir a chave privada no arquivo</span>
+        </label>
+        <div class="grid-2">
+          <div class="tf select">
             <select id="pemKeyFormat">
-              <option value="pkcs8">PKCS#8 (PRIVATE KEY)</option>
-              <option value="pkcs1">PKCS#1 (RSA PRIVATE KEY)</option>
+              <option value="pkcs8">PKCS#8 — BEGIN PRIVATE KEY</option>
+              <option value="pkcs1">PKCS#1 — BEGIN RSA PRIVATE KEY</option>
             </select>
+            <label for="pemKeyFormat">Formato da chave</label>
           </div>
         </div>
       </div>
 
       <div class="opts hidden" id="optsPfx">
-        <div class="row">
-          <div class="field">
-            <label>Senha do novo arquivo PFX</label>
-            <input type="password" id="pfxOutPassword" placeholder="defina uma senha">
+        <div class="grid-2">
+          <div class="tf">
+            <input type="password" id="pfxOutPassword" placeholder=" " autocomplete="new-password">
+            <label for="pfxOutPassword">Senha do novo PFX <span class="req">*</span></label>
+            <button class="tf-trailing" type="button" data-pw="pfxOutPassword" aria-label="Mostrar senha">
+              <svg class="icon" viewBox="0 0 24 24"><use href="#i-eye"/></svg>
+            </button>
+            <p class="supporting">Será pedida ao importar o certificado no servidor.</p>
           </div>
-          <div class="field">
-            <label>Nome amigável (alias)</label>
-            <input type="text" id="pfxOutAlias" placeholder="ex: meu-certificado" value="certificado">
+          <div class="tf">
+            <input type="text" id="pfxOutAlias" placeholder=" " value="certificado" autocomplete="off">
+            <label for="pfxOutAlias">Nome amigável (alias)</label>
           </div>
         </div>
-        <div class="field" style="max-width:340px;">
-          <label>Algoritmo de cifra</label>
-          <select id="pfxOutAlg">
-            <option value="3des">3DES — máxima compatibilidade (Windows, IIS, Java)</option>
-            <option value="aes256">AES-256 — mais moderno</option>
-            <option value="aes128">AES-128</option>
-          </select>
+        <div class="grid-2">
+          <div class="tf select">
+            <select id="pfxOutAlg">
+              <option value="3des">3DES — máxima compatibilidade</option>
+              <option value="aes256">AES-256 — mais moderno</option>
+              <option value="aes128">AES-128</option>
+            </select>
+            <label for="pfxOutAlg">Algoritmo de cifra</label>
+            <p class="supporting">Windows/IIS e Java antigo pedem 3DES.</p>
+          </div>
         </div>
-        <div class="msg warn" style="display:block;">Requer uma chave privada carregada na etapa 1.</div>
-        <details>
-          <summary>Comando OpenSSL equivalente →</summary>
-          <pre class="cmd" id="cmdPfx"></pre>
-        </details>
+        <div class="msg warn show" id="pfxNeedKey">Requer uma chave privada carregada na etapa 1.</div>
+        <details><summary>Comando OpenSSL equivalente</summary><pre class="code" id="cmdPfx"></pre></details>
       </div>
 
       <div class="opts hidden" id="optsJks">
-        <div class="row">
-          <div class="field">
-            <label>Senha do keystore JKS</label>
-            <input type="password" id="jksOutPassword" placeholder="defina uma senha">
+        <div class="grid-2">
+          <div class="tf">
+            <input type="password" id="jksOutPassword" placeholder=" " autocomplete="new-password">
+            <label for="jksOutPassword">Senha do keystore <span class="req">*</span></label>
+            <button class="tf-trailing" type="button" data-pw="jksOutPassword" aria-label="Mostrar senha">
+              <svg class="icon" viewBox="0 0 24 24"><use href="#i-eye"/></svg>
+            </button>
           </div>
-          <div class="field">
-            <label>Prefixo do alias</label>
-            <input type="text" id="jksOutAlias" placeholder="ex: meu-certificado" value="certificado">
+          <div class="tf">
+            <input type="text" id="jksOutAlias" placeholder=" " value="certificado" autocomplete="off">
+            <label for="jksOutAlias">Prefixo do alias</label>
           </div>
         </div>
-        <div class="msg warn" style="display:block;">Gera um <b>truststore</b> (somente certificados públicos). O formato JKS para entradas com chave privada usa um algoritmo proprietário da Oracle não reimplementado aqui — veja o comando equivalente abaixo.</div>
-        <details>
-          <summary>Preciso de um JKS com a chave privada →</summary>
-          <pre class="cmd">keytool -importkeystore \
+        <div class="msg warn show">Gera um <b>truststore</b> (somente certificados públicos). JKS com chave privada usa algoritmo proprietário da Oracle, não reimplementado aqui.</div>
+        <details><summary>Preciso de um JKS com a chave privada</summary><pre class="code">keytool -importkeystore \
   -srckeystore certificado.pfx -srcstoretype PKCS12 \
-  -destkeystore certificado.jks -deststoretype JKS</pre>
-        </details>
+  -destkeystore certificado.jks -deststoretype JKS</pre></details>
       </div>
 
       <div class="opts hidden" id="optsKey">
-        <div class="row">
-          <div class="field">
-            <label>Formato da chave</label>
+        <div class="grid-2">
+          <div class="tf select">
             <select id="keyOutFormat">
-              <option value="pkcs8">PKCS#8 (PRIVATE KEY)</option>
-              <option value="pkcs1">PKCS#1 (RSA PRIVATE KEY)</option>
+              <option value="pkcs8">PKCS#8 — BEGIN PRIVATE KEY</option>
+              <option value="pkcs1">PKCS#1 — BEGIN RSA PRIVATE KEY</option>
             </select>
+            <label for="keyOutFormat">Formato da chave</label>
           </div>
-          <div class="field">
-            <label>Senha de criptografia (opcional)</label>
-            <input type="password" id="keyOutPassword" placeholder="deixe em branco para não criptografar">
+          <div class="tf">
+            <input type="password" id="keyOutPassword" placeholder=" " autocomplete="new-password">
+            <label for="keyOutPassword">Senha de criptografia</label>
+            <button class="tf-trailing" type="button" data-pw="keyOutPassword" aria-label="Mostrar senha">
+              <svg class="icon" viewBox="0 0 24 24"><use href="#i-eye"/></svg>
+            </button>
+            <p class="supporting">Em branco = chave sem senha.</p>
           </div>
         </div>
-        <div class="msg warn" style="display:block;">Requer uma chave privada carregada na etapa 1. Se uma senha for definida, a chave é exportada como PKCS#8 criptografado (independente da opção de formato acima).</div>
+        <div class="msg warn show" id="keyNeedKey">Requer uma chave privada carregada na etapa 1. Com senha, a chave sai como PKCS#8 criptografado.</div>
       </div>
 
-      <div style="margin-top:20px;">
-        <button class="action" id="btnConvert" disabled>Converter e baixar</button>
+      <div class="actions">
+        <button class="btn filled" id="btnConvert" type="button" disabled>
+          <svg class="icon" viewBox="0 0 24 24"><use href="#i-download"/></svg>Converter e baixar
+        </button>
+        <button class="btn text" id="btnResetConvert" type="button">
+          <svg class="icon" viewBox="0 0 24 24"><use href="#i-refresh"/></svg>Recomeçar
+        </button>
       </div>
-      <div class="msg" id="outputMsg"></div>
-    </div>
+      <div class="msg" id="outputMsg" role="status"></div>
+    </article>
   </section>
 
-  <!-- ══════════════════════════ MODO: GERAR CSR ══════════════════════════ -->
-  <section class="mode-pane" id="mode-csr" role="tabpanel">
+  <!-- ══════════════════════════ GERAR CSR ══════════════════════════ -->
+  <section class="pane" id="mode-csr" role="tabpanel" aria-labelledby="tabbtn-csr" tabindex="0">
 
-    <div class="panel">
-      <h2><span class="num">1</span>Dados do certificado</h2>
-      <p class="desc">Preencha o Subject como a Autoridade Certificadora exige, ou carregue um arquivo <code>.cnf</code> do OpenSSL com esses dados.</p>
+    <article class="card step">
+      <header class="step-head">
+        <span class="step-num">1</span>
+        <div>
+          <h2>Dados do certificado</h2>
+          <p class="step-sub">Preencha o Subject como a Autoridade Certificadora exige, ou carregue um arquivo <code>.cnf</code> do OpenSSL.</p>
+        </div>
+      </header>
 
-      <div class="tabs">
-        <button class="tab-btn active" data-tab="manual">Preencher manualmente</button>
-        <button class="tab-btn" data-tab="cnf">Carregar arquivo .cnf</button>
+      <div class="segmented" role="tablist" aria-label="Forma de preenchimento">
+        <button class="segment active" role="tab" aria-selected="true" data-seg="dados" data-target="dados-manual">Preencher manualmente</button>
+        <button class="segment" role="tab" aria-selected="false" data-seg="dados" data-target="dados-cnf">Carregar arquivo .cnf</button>
       </div>
 
-      <div class="tab-pane" id="tab-cnf">
-        <div class="row">
-          <div class="field">
-            <label>Arquivo de configuração (.cnf / .conf / .cfg / .txt)</label>
-            <input type="file" id="cnfFile" accept=".cnf,.conf,.cfg,.cfn,.txt,.ini">
+      <div class="seg-pane active" id="dados-manual">
+        <div class="tf">
+          <input type="text" id="g_cn" placeholder=" " autocomplete="off">
+          <label for="g_cn">Common Name (CN) <span class="req">*</span></label>
+          <p class="supporting">Domínio principal, ou o nome do titular. Ex.: <code>exemplo.com.br</code></p>
+        </div>
+
+        <div class="grid-2">
+          <div class="tf">
+            <input type="text" id="g_o" placeholder=" " autocomplete="off">
+            <label for="g_o">Organização (O)</label>
+          </div>
+          <div class="tf">
+            <input type="text" id="g_ou" placeholder=" " autocomplete="off">
+            <label for="g_ou">Unidade (OU)</label>
           </div>
         </div>
-        <div class="field">
-          <label>Ou cole o conteúdo aqui</label>
-          <textarea id="cnfText" rows="8" spellcheck="false" placeholder="[ req ]&#10;default_bits = 2048&#10;default_md = sha256&#10;prompt = no&#10;distinguished_name = req_distinguished_name&#10;req_extensions = v3_req&#10;&#10;[ req_distinguished_name ]&#10;C  = BR&#10;ST = SP&#10;L  = Sao Paulo&#10;O  = Minha Empresa LTDA&#10;OU = TI&#10;CN = exemplo.com.br&#10;&#10;[ v3_req ]&#10;subjectAltName = @alt_names&#10;&#10;[ alt_names ]&#10;DNS.1 = exemplo.com.br&#10;DNS.2 = www.exemplo.com.br&#10;IP.1  = 192.168.0.10"></textarea>
-          <small class="help">Também aceita uma linha de subject no formato <code>/C=BR/O=Empresa/CN=exemplo.com.br</code> ou pares simples <code>CN=exemplo.com.br</code>, um por linha.</small>
+
+        <div class="grid-3">
+          <div class="tf">
+            <input type="text" id="g_l" placeholder=" " autocomplete="off">
+            <label for="g_l">Cidade (L)</label>
+          </div>
+          <div class="tf">
+            <input type="text" id="g_st" placeholder=" " autocomplete="off">
+            <label for="g_st">Estado (ST)</label>
+          </div>
+          <div class="tf">
+            <input type="text" id="g_c" placeholder=" " maxlength="2" autocomplete="off">
+            <label for="g_c">País (C)</label>
+            <p class="supporting">2 letras</p>
+          </div>
         </div>
-        <button class="action" id="btnLoadCnf">Carregar dados do arquivo</button>
-        <div class="msg" id="cnfMsg"></div>
+
+        <div class="tf">
+          <input type="text" id="g_email" placeholder=" " autocomplete="off">
+          <label for="g_email">E-mail</label>
+        </div>
+
+        <div class="field-block">
+          <span class="field-title">Subject Alternative Names (SAN)</span>
+          <div class="chips-field" id="sanField">
+            <div class="chips" id="sanChips"></div>
+            <input type="text" id="sanInput" placeholder="digite um domínio ou IP e pressione Enter" autocomplete="off" aria-label="Adicionar SAN">
+          </div>
+          <p class="supporting">Detecta DNS, IP, e-mail e URI automaticamente. O CN entra sozinho na lista. Cole vários de uma vez separados por vírgula ou quebra de linha.</p>
+        </div>
       </div>
 
-      <div class="tab-pane active" id="tab-manual">
-        <div class="field">
-          <label>Common Name (CN) <span class="req">*</span></label>
-          <input type="text" id="g_cn" placeholder="exemplo.com.br" autocomplete="off">
-          <small class="help">Domínio principal, ou o nome do titular no caso de certificados de pessoa/servidor.</small>
+      <div class="seg-pane" id="dados-cnf">
+        <div class="dropzone" id="dropCnf" tabindex="0" role="button" aria-label="Selecionar arquivo de configuração">
+          <input type="file" id="cnfFile" accept=".cnf,.conf,.cfg,.cfn,.txt,.ini" hidden>
+          <svg class="icon dz-icon" viewBox="0 0 24 24"><use href="#i-upload"/></svg>
+          <p class="dz-title">Arraste o arquivo <b>.cnf</b> do OpenSSL</p>
+          <p class="dz-sub">ou clique para escolher · .cnf · .conf · .cfg · .txt</p>
         </div>
 
-        <div class="row">
-          <div class="field">
-            <label>Organização (O)</label>
-            <input type="text" id="g_o" placeholder="Minha Empresa LTDA" autocomplete="off">
-          </div>
-          <div class="field">
-            <label>Unidade (OU)</label>
-            <input type="text" id="g_ou" placeholder="Tecnologia da Informação" autocomplete="off">
-          </div>
+        <div class="tf">
+          <textarea id="cnfText" rows="9" placeholder=" " spellcheck="false" class="mono"></textarea>
+          <label for="cnfText">Ou cole o conteúdo aqui</label>
         </div>
+        <p class="supporting">Aceita <code>[req_distinguished_name]</code> com <code>prompt = no</code> ou valores <code>*_default</code>, SAN por <code>@alt_names</code> ou inline, linha de subject <code>/C=BR/CN=...</code> e pares soltos <code>CN = ...</code>.</p>
 
-        <div class="row">
-          <div class="field">
-            <label>Cidade (L)</label>
-            <input type="text" id="g_l" placeholder="São Paulo" autocomplete="off">
-          </div>
-          <div class="field">
-            <label>Estado (ST)</label>
-            <input type="text" id="g_st" placeholder="SP" autocomplete="off">
-          </div>
-          <div class="field" style="flex:0 0 110px;min-width:110px;">
-            <label>País (C)</label>
-            <input type="text" id="g_c" placeholder="BR" maxlength="2" autocomplete="off">
-          </div>
+        <div class="actions">
+          <button class="btn filled" id="btnLoadCnf" type="button">
+            <svg class="icon" viewBox="0 0 24 24"><use href="#i-arrow-right"/></svg>Carregar dados
+          </button>
+          <button class="btn text" id="btnExemploCnf" type="button">Ver um exemplo</button>
         </div>
-
-        <div class="field">
-          <label>E-mail</label>
-          <input type="text" id="g_email" placeholder="ti@minhaempresa.com.br" autocomplete="off">
-        </div>
-
-        <div class="field">
-          <label>Subject Alternative Names (SAN)</label>
-          <textarea id="g_sans" rows="4" spellcheck="false" placeholder="exemplo.com.br&#10;www.exemplo.com.br&#10;api.exemplo.com.br&#10;192.168.0.10"></textarea>
-          <small class="help">Um por linha. Detecta automaticamente DNS, IP, e-mail e URI. O CN é incluído automaticamente.</small>
-        </div>
+        <div class="msg" id="cnfMsg" role="status"></div>
       </div>
-    </div>
+    </article>
 
-    <div class="panel">
-      <h2><span class="num">2</span>Chave privada e assinatura</h2>
+    <article class="card step">
+      <header class="step-head">
+        <span class="step-num">2</span>
+        <div>
+          <h2>Chave privada e assinatura</h2>
+          <p class="step-sub">Os padrões abaixo atendem à maioria das Autoridades Certificadoras.</p>
+        </div>
+      </header>
 
-      <div class="row">
-        <div class="field">
-          <label>Tamanho da chave RSA</label>
+      <div class="grid-3">
+        <div class="tf select">
           <select id="g_bits">
-            <option value="2048" selected>2048 bits (padrão)</option>
+            <option value="2048" selected>2048 bits</option>
             <option value="3072">3072 bits</option>
-            <option value="4096">4096 bits (mais lento)</option>
+            <option value="4096">4096 bits</option>
           </select>
+          <label for="g_bits">Tamanho da chave RSA</label>
         </div>
-        <div class="field">
-          <label>Algoritmo de assinatura</label>
+        <div class="tf select">
           <select id="g_digest">
             <option value="sha256" selected>SHA-256</option>
             <option value="sha384">SHA-384</option>
             <option value="sha512">SHA-512</option>
           </select>
+          <label for="g_digest">Algoritmo de assinatura</label>
         </div>
-        <div class="field">
-          <label>Formato da chave</label>
+        <div class="tf select">
           <select id="g_keyfmt">
-            <option value="pkcs8" selected>PKCS#8 (PRIVATE KEY)</option>
-            <option value="pkcs1">PKCS#1 (RSA PRIVATE KEY)</option>
+            <option value="pkcs8" selected>PKCS#8</option>
+            <option value="pkcs1">PKCS#1</option>
           </select>
+          <label for="g_keyfmt">Formato da chave</label>
         </div>
       </div>
 
-      <div class="field">
-        <label class="inline-check"><input type="checkbox" id="g_protect"> Proteger a chave com senha (AES-256)</label>
-      </div>
+      <label class="switch-row">
+        <span class="switch"><input type="checkbox" id="g_protect"><span class="track"><span class="thumb"></span></span></span>
+        <span class="switch-label">Proteger a chave com senha<small>Criptografa o arquivo .key com AES-256</small></span>
+      </label>
 
-      <div class="row hidden" id="g_passRow">
-        <div class="field">
-          <label>Senha da chave</label>
-          <input type="password" id="g_keyPass" autocomplete="new-password">
+      <div class="grid-2 hidden" id="g_passRow">
+        <div class="tf">
+          <input type="password" id="g_keyPass" placeholder=" " autocomplete="new-password">
+          <label for="g_keyPass">Senha da chave <span class="req">*</span></label>
+          <button class="tf-trailing" type="button" data-pw="g_keyPass" aria-label="Mostrar senha">
+            <svg class="icon" viewBox="0 0 24 24"><use href="#i-eye"/></svg>
+          </button>
         </div>
-        <div class="field">
-          <label>Confirmar senha</label>
-          <input type="password" id="g_keyPass2" autocomplete="new-password">
+        <div class="tf">
+          <input type="password" id="g_keyPass2" placeholder=" " autocomplete="new-password">
+          <label for="g_keyPass2">Confirmar senha <span class="req">*</span></label>
+          <button class="tf-trailing" type="button" data-pw="g_keyPass2" aria-label="Mostrar senha">
+            <svg class="icon" viewBox="0 0 24 24"><use href="#i-eye"/></svg>
+          </button>
         </div>
       </div>
 
-      <div class="field" style="max-width:340px;">
-        <label>Nome base dos arquivos</label>
-        <input type="text" id="g_basename" placeholder="usa o CN se ficar em branco" autocomplete="off">
+      <div class="grid-2">
+        <div class="tf">
+          <input type="text" id="g_basename" placeholder=" " autocomplete="off">
+          <label for="g_basename">Nome base dos arquivos</label>
+          <p class="supporting">Em branco, usa o CN.</p>
+        </div>
       </div>
 
-      <button class="action" id="btnGenerate">Gerar CSR e chave</button>
-      <button class="ghost" id="btnClearCsr" style="margin-left:8px;">Limpar</button>
-      <div class="msg" id="genMsg"></div>
-    </div>
+      <div class="progress hidden" id="genProgress"><div class="progress-bar"></div></div>
 
-    <div class="panel hidden" id="panelCsrResult">
-      <h2><span class="num">3</span>Resultado</h2>
-      <p class="desc">Envie o <b>.csr</b> para a Autoridade Certificadora e guarde o <b>.key</b> — ele não fica salvo em lugar nenhum.</p>
+      <div class="actions">
+        <button class="btn filled" id="btnGenerate" type="button">
+          <svg class="icon" viewBox="0 0 24 24"><use href="#i-key"/></svg><span class="btn-label">Gerar CSR e chave</span>
+        </button>
+        <button class="btn text" id="btnClearCsr" type="button">
+          <svg class="icon" viewBox="0 0 24 24"><use href="#i-refresh"/></svg>Limpar
+        </button>
+      </div>
+      <div class="msg" id="genMsg" role="status"></div>
+    </article>
 
-      <div class="row" style="margin-bottom:18px;">
-        <button class="action" id="dlCsr">Baixar .csr</button>
-        <button class="action" id="dlKey">Baixar .key</button>
-        <button class="ghost" id="sendToConvert">Usar esta chave no conversor →</button>
+    <article class="card step hidden" id="panelCsrResult">
+      <header class="step-head">
+        <span class="step-num">3</span>
+        <div>
+          <h2>Resultado</h2>
+          <p class="step-sub">Envie o <b>.csr</b> para a Autoridade Certificadora e guarde o <b>.key</b>.</p>
+        </div>
+      </header>
+
+      <div class="msg warn show">
+        <svg class="icon" viewBox="0 0 24 24"><use href="#i-warn"/></svg>
+        <span><b>Baixe a chave antes de fechar a página.</b> Ela não fica salva em lugar nenhum — sem ela o certificado emitido não serve para nada.</span>
       </div>
 
-      <div class="field">
-        <div class="out-head"><label>CSR — enviar para a AC</label><button class="ghost mini copy" data-target="csrOut">copiar</button></div>
-        <textarea id="csrOut" class="mono" rows="11" readonly spellcheck="false"></textarea>
+      <div class="actions">
+        <button class="btn filled" id="dlKey" type="button">
+          <svg class="icon" viewBox="0 0 24 24"><use href="#i-download"/></svg>Baixar .key
+        </button>
+        <button class="btn tonal" id="dlCsr" type="button">
+          <svg class="icon" viewBox="0 0 24 24"><use href="#i-download"/></svg>Baixar .csr
+        </button>
+        <button class="btn outlined" id="sendToConvert" type="button">
+          <svg class="icon" viewBox="0 0 24 24"><use href="#i-arrow-right"/></svg>Usar esta chave no conversor
+        </button>
       </div>
 
-      <div class="field">
-        <div class="out-head"><label>Chave privada — <span class="danger">nunca compartilhe</span></label><button class="ghost mini copy" data-target="keyOut">copiar</button></div>
-        <textarea id="keyOut" class="mono" rows="11" readonly spellcheck="false"></textarea>
+      <div class="output">
+        <div class="output-head">
+          <span class="output-title">CSR — enviar para a AC</span>
+          <button class="btn text small copy" data-target="csrOut" type="button">
+            <svg class="icon" viewBox="0 0 24 24"><use href="#i-copy"/></svg>Copiar
+          </button>
+        </div>
+        <textarea id="csrOut" class="mono" rows="10" readonly spellcheck="false"></textarea>
+      </div>
+
+      <div class="output">
+        <div class="output-head">
+          <span class="output-title">Chave privada — <b class="danger">nunca compartilhe</b></span>
+          <button class="btn text small copy" data-target="keyOut" type="button">
+            <svg class="icon" viewBox="0 0 24 24"><use href="#i-copy"/></svg>Copiar
+          </button>
+        </div>
+        <textarea id="keyOut" class="mono" rows="10" readonly spellcheck="false"></textarea>
       </div>
 
       <div id="csrDump"></div>
-
-      <details>
-        <summary>Comando OpenSSL equivalente →</summary>
-        <pre class="cmd" id="cmdCsr"></pre>
-      </details>
-    </div>
+      <details><summary>Comando OpenSSL equivalente</summary><pre class="code" id="cmdCsr"></pre></details>
+    </article>
   </section>
 
-  <!-- ══════════════════════════ MODO: INSPECIONAR ══════════════════════════ -->
-  <section class="mode-pane" id="mode-inspect" role="tabpanel">
-    <div class="panel">
-      <h2><span class="num">i</span>Inspecionar certificado, cadeia ou CSR</h2>
-      <p class="desc">Veja subject, emissor, validade, SAN e fingerprint sem precisar do OpenSSL.</p>
-
-      <div class="row">
-        <div class="field">
-          <label>Arquivo (.crt / .cer / .pem / .der / .csr / .p7b)</label>
-          <input type="file" id="inspectFile" accept=".cer,.crt,.pem,.der,.csr,.req,.p7b,.txt">
+  <!-- ══════════════════════════ INSPECIONAR ══════════════════════════ -->
+  <section class="pane" id="mode-inspect" role="tabpanel" aria-labelledby="tabbtn-inspect" tabindex="0">
+    <article class="card">
+      <header class="step-head">
+        <span class="step-num"><svg class="icon" viewBox="0 0 24 24"><use href="#i-search"/></svg></span>
+        <div>
+          <h2>Inspecionar certificado, cadeia ou CSR</h2>
+          <p class="step-sub">Veja subject, emissor, validade, SAN e fingerprint sem precisar do OpenSSL.</p>
         </div>
+      </header>
+
+      <div class="dropzone" id="dropInspect" tabindex="0" role="button" aria-label="Selecionar arquivo para inspecionar">
+        <input type="file" id="inspectFile" accept=".cer,.crt,.pem,.der,.csr,.req,.p7b,.txt" hidden>
+        <svg class="icon dz-icon" viewBox="0 0 24 24"><use href="#i-upload"/></svg>
+        <p class="dz-title">Arraste um arquivo aqui</p>
+        <p class="dz-sub">.crt · .cer · .pem · .der · .csr · .p7b</p>
       </div>
-      <div class="field">
-        <label>Ou cole o conteúdo PEM</label>
-        <textarea id="inspectPem" class="mono" rows="8" spellcheck="false" placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"></textarea>
+
+      <div class="tf">
+        <textarea id="inspectPem" rows="8" placeholder=" " spellcheck="false" class="mono"></textarea>
+        <label for="inspectPem">Ou cole o conteúdo PEM</label>
       </div>
-      <button class="action" id="btnInspect">Inspecionar</button>
-      <div class="msg" id="inspectMsg"></div>
-      <div id="inspectOut" style="margin-top:16px;"></div>
-    </div>
+
+      <div class="actions">
+        <button class="btn filled" id="btnInspect" type="button">
+          <svg class="icon" viewBox="0 0 24 24"><use href="#i-search"/></svg>Inspecionar
+        </button>
+      </div>
+      <div class="msg" id="inspectMsg" role="status"></div>
+      <div id="inspectOut"></div>
+    </article>
   </section>
 
-  <footer>
-    <p>processamento 100% local · node-forge · nenhum dado sai do seu navegador</p>
-    <p class="credits">desenvolvido por <span>Emmanuel Mendes</span> e <span>Lucas Tamanaka</span></p>
-  </footer>
-</div>
+</main>
+
+<footer>
+  <p>processamento 100% local · node-forge · nenhum dado sai do seu navegador</p>
+  <p class="credits">desenvolvido por <span>Emmanuel Mendes</span> e <span>Lucas Tamanaka</span></p>
+</footer>
+
+<div class="snackbar" id="snackbar" role="status" aria-live="polite"></div>
 
 <script src="vendor/forge.min.js"></script>
 <script src="assets/app.js"></script>
