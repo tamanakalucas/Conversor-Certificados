@@ -6,7 +6,7 @@ A interface segue o **Material Design 3**: tokens de cor gerados a partir do tea
 
 Tudo roda **no navegador do usuário**. Não há servidor, backend nem banco de dados: chaves, certificados e senhas nunca saem da máquina. Por isso os arquivos gerados são baixados na hora — não ficam salvos em lugar nenhum.
 
-## As três abas
+## As quatro abas
 
 ### 1. Converter
 Fluxo em três etapas, o mesmo de antes, com melhorias:
@@ -27,6 +27,11 @@ Fluxo em três etapas, o mesmo de antes, com melhorias:
 
 ### 3. Inspecionar
 Decodifica certificado, cadeia, CSR ou chave: subject, emissor, validade com alerta de expiração, SAN, tamanho da chave, serial e fingerprint SHA-256.
+
+### 4. Ajuda
+Documentação embutida, com navegação por tópicos e destaque do tópico atual conforme a rolagem. Cobre o **processo completo** (linha do tempo das sete etapas, diferença entre AC interna e pública, modelo de chamado, renovação), o uso de cada aba, formatos de arquivo, instalação por plataforma, problemas comuns e segurança.
+
+Cada etapa das outras abas tem um botão **Ajuda** que abre o tópico correspondente e oferece um botão de voltar para de onde a pessoa veio. A [wiki do repositório](https://github.com/tamanakalucas/Conversor-Certificados/wiki) segue como referência longa; a aba Ajuda responde "o que eu faço agora" sem tirar ninguém da tela.
 
 ## Detalhes de usabilidade
 
@@ -103,7 +108,7 @@ npx http-server . -p 4173
 
 ```
 .
-├── index.html              # header, 3 abas e os painéis
+├── index.html              # header, 4 abas (inclusive a ajuda) e os painéis
 ├── assets/
 │   ├── styles.css          # tokens e componentes Material Design 3 (tema claro + escuro)
 │   └── app.js              # toda a lógica, sem build

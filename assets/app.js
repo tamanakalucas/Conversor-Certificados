@@ -120,18 +120,106 @@
   /* ============================================================
      Navegação: tabs primárias e segmented buttons
      ============================================================ */
-  function showMode(name) {
+  function showMode(name, semRolar) {
     $$('.tab').forEach(function (b) {
       var on = b.dataset.mode === name;
       b.classList.toggle('active', on);
       b.setAttribute('aria-selected', on ? 'true' : 'false');
     });
     $$('.pane').forEach(function (p) { p.classList.toggle('active', p.id === 'mode-' + name); });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (!semRolar) window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   $$('.tab').forEach(function (b) {
     b.addEventListener('click', function () { showMode(b.dataset.mode); });
   });
+
+  /* ============================================================
+     Ajuda: navegação por tópicos, links contextuais e voltar
+     ============================================================ */
+  var helpFrom = null;   // aba de onde o usuário veio ao pedir ajuda
+
+  function activeMode() {
+    var p = document.querySelector('.pane.active');
+    return p ? p.id.replace('mode-', '') : 'convert';
+  }
+
+  function scrollToHelp(id) {
+    var alvo = $(id);
+    if (!alvo) return;
+    alvo.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    markHelpNav(id);
+  }
+
+  function markHelpNav(id) {
+    $$('.help-nav-item').forEach(function (a) {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+    });
+  }
+
+  function openHelp(id) {
+    var atual = activeMode();
+    if (atual !== 'ajuda') {
+      helpFrom = atual;
+      var rotulo = $$('.tab').filter(function (t) { return t.dataset.mode === helpFrom; })[0];
+      $('helpBack').querySelector('span').textContent =
+        'Voltar para ' + (rotulo ? rotulo.textContent.trim() : 'a ferramenta');
+      $('helpBack').classList.remove('hidden');
+    }
+    showMode('ajuda', true);
+    setTimeout(function () { scrollToHelp(id); }, 60);
+  }
+
+  // botões "Ajuda" nas etapas e link do banner
+  $$('[data-help]').forEach(function (b) {
+    b.addEventListener('click', function () { openHelp(b.dataset.help); });
+  });
+
+  $('helpBack').addEventListener('click', function () {
+    if (helpFrom) showMode(helpFrom);
+    this.classList.add('hidden');
+    helpFrom = null;
+  });
+
+  // navegação lateral da ajuda
+  $$('.help-nav-item').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      scrollToHelp(a.getAttribute('href').slice(1));
+    });
+  });
+
+  // links internos entre tópicos
+  $$('a.jump').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      scrollToHelp(a.getAttribute('href').slice(1));
+    });
+  });
+
+  // destaca o tópico visível conforme rola
+  var spyAgendado = false;
+  function atualizaSpy() {
+    spyAgendado = false;
+    var pane = $('mode-ajuda');
+    if (!pane || !pane.classList.contains('active')) return;
+    var secoes = $$('.help-section');
+    if (!secoes.length) return;
+    var limite = 110;   // um pouco abaixo do scroll-margin-top das seções (88px)
+    var atual = secoes[0];
+    for (var i = 0; i < secoes.length; i++) {
+      if (secoes[i].getBoundingClientRect().top <= limite) atual = secoes[i];
+    }
+    // no fim da página, marca o último tópico
+    if (window.innerHeight + window.scrollY >= document.body.scrollHeight - 4) {
+      atual = secoes[secoes.length - 1];
+    }
+    markHelpNav(atual.id);
+  }
+  window.addEventListener('scroll', function () {
+    if (spyAgendado) return;
+    spyAgendado = true;
+    setTimeout(atualizaSpy, 80);
+  }, { passive: true });
 
   $$('.segment').forEach(function (btn) {
     btn.addEventListener('click', function () {

@@ -35,6 +35,10 @@
     <g id="i-arrow-right"><path d="M4 12h15m0 0l-5-5m5 5l-5 5"/></g>
     <g id="i-plus"><path d="M12 5v14M5 12h14"/></g>
     <g id="i-refresh"><path d="M20 12a8 8 0 10-2.6 5.9M20 18v-5h-5"/></g>
+    <g id="i-help"><circle cx="12" cy="12" r="8.5"/><path d="M9.7 9.6a2.4 2.4 0 114.3 1.5c-.7.8-1.9 1.1-1.9 2.4m0 2.5v.2"/></g>
+    <g id="i-arrow-left"><path d="M20 12H5m0 0l5-5m-5 5l5 5"/></g>
+    <g id="i-book"><path d="M4 5.5A1.5 1.5 0 015.5 4H10a2 2 0 012 2v13a2 2 0 00-2-2H5.5A1.5 1.5 0 014 15.5v-10z"/><path d="M20 5.5A1.5 1.5 0 0018.5 4H14a2 2 0 00-2 2v13a2 2 0 012-2h4.5a1.5 1.5 0 001.5-1.5v-10z"/></g>
+    <g id="i-external"><path d="M14 5h5v5M19 5l-8 8M18 13.5V18a1.5 1.5 0 01-1.5 1.5H6A1.5 1.5 0 014.5 18V7.5A1.5 1.5 0 016 6h4.5"/></g>
   </defs>
 </svg>
 
@@ -66,7 +70,10 @@
 
     <div class="banner">
       <svg class="icon" viewBox="0 0 24 24"><use href="#i-lock"/></svg>
-      <p><b>Tudo roda localmente.</b> A geração de chaves e a conversão acontecem inteiramente no seu navegador com a biblioteca node-forge — nenhum arquivo, senha ou chave privada é enviado para qualquer servidor.</p>
+      <div>
+        <p><b>Tudo roda localmente.</b> A geração de chaves e a conversão acontecem inteiramente no seu navegador com a biblioteca node-forge — nenhum arquivo, senha ou chave privada é enviado para qualquer servidor.</p>
+        <button class="banner-link" type="button" data-help="h-processo">É a primeira vez? Entenda o processo completo →</button>
+      </div>
     </div>
   </section>
 
@@ -80,6 +87,9 @@
     <button class="tab" role="tab" aria-selected="false" aria-controls="mode-inspect" id="tabbtn-inspect" data-mode="inspect">
       <svg class="icon" viewBox="0 0 24 24"><use href="#i-search"/></svg><span>Inspecionar</span>
     </button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="mode-ajuda" id="tabbtn-ajuda" data-mode="ajuda">
+      <svg class="icon" viewBox="0 0 24 24"><use href="#i-help"/></svg><span>Ajuda</span>
+    </button>
   </nav>
 
   <!-- ══════════════════════════ CONVERTER ══════════════════════════ -->
@@ -92,6 +102,7 @@
           <h2>Carregar certificado de origem</h2>
           <p class="step-sub">Escolha como seu certificado está empacotado hoje.</p>
         </div>
+        <button class="help-btn" type="button" data-help="h-converter" aria-label="Ajuda sobre esta etapa"><svg class="icon" viewBox="0 0 24 24"><use href="#i-help"/></svg><span>Ajuda</span></button>
       </header>
 
       <div class="segmented" role="tablist" aria-label="Tipo de origem">
@@ -177,6 +188,7 @@
           <h2>Conteúdo detectado</h2>
           <p class="step-sub">Marque qual certificado é o principal (leaf) e quais entram na cadeia exportada.</p>
         </div>
+        <button class="help-btn" type="button" data-help="h-converter" aria-label="Ajuda sobre esta etapa"><svg class="icon" viewBox="0 0 24 24"><use href="#i-help"/></svg><span>Ajuda</span></button>
       </header>
       <div id="certList" class="cert-list"></div>
       <div class="msg" id="pairMsg" role="status"></div>
@@ -189,6 +201,7 @@
           <h2>Formato de saída</h2>
           <p class="step-sub">Escolha o formato e ajuste as opções antes de baixar.</p>
         </div>
+        <button class="help-btn" type="button" data-help="h-formatos" aria-label="Ajuda sobre esta etapa"><svg class="icon" viewBox="0 0 24 24"><use href="#i-help"/></svg><span>Ajuda</span></button>
       </header>
 
       <div class="fmt-grid" id="fmtGrid" role="radiogroup" aria-label="Formato de saída">
@@ -311,6 +324,7 @@
           <h2>Dados do certificado</h2>
           <p class="step-sub">Preencha o Subject como a Autoridade Certificadora exige, ou carregue um arquivo <code>.cnf</code> do OpenSSL.</p>
         </div>
+        <button class="help-btn" type="button" data-help="h-gerar" aria-label="Ajuda sobre esta etapa"><svg class="icon" viewBox="0 0 24 24"><use href="#i-help"/></svg><span>Ajuda</span></button>
       </header>
 
       <div class="segmented" role="tablist" aria-label="Forma de preenchimento">
@@ -398,6 +412,7 @@
           <h2>Chave privada e assinatura</h2>
           <p class="step-sub">Os padrões abaixo atendem à maioria das Autoridades Certificadoras.</p>
         </div>
+        <button class="help-btn" type="button" data-help="h-gerar" aria-label="Ajuda sobre esta etapa"><svg class="icon" viewBox="0 0 24 24"><use href="#i-help"/></svg><span>Ajuda</span></button>
       </header>
 
       <div class="grid-3">
@@ -476,6 +491,7 @@
           <h2>Resultado</h2>
           <p class="step-sub">Envie o <b>.csr</b> para a Autoridade Certificadora e guarde o <b>.key</b>.</p>
         </div>
+        <button class="help-btn" type="button" data-help="h-processo" aria-label="Ajuda sobre esta etapa"><svg class="icon" viewBox="0 0 24 24"><use href="#i-help"/></svg><span>Ajuda</span></button>
       </header>
 
       <div class="msg warn show">
@@ -529,6 +545,7 @@
           <h2>Inspecionar certificado, cadeia ou CSR</h2>
           <p class="step-sub">Veja subject, emissor, validade, SAN e fingerprint sem precisar do OpenSSL.</p>
         </div>
+        <button class="help-btn" type="button" data-help="h-inspecionar" aria-label="Ajuda sobre esta etapa"><svg class="icon" viewBox="0 0 24 24"><use href="#i-help"/></svg><span>Ajuda</span></button>
       </header>
 
       <div class="dropzone" id="dropInspect" tabindex="0" role="button" aria-label="Selecionar arquivo para inspecionar">
@@ -551,6 +568,528 @@
       <div class="msg" id="inspectMsg" role="status"></div>
       <div id="inspectOut"></div>
     </article>
+  </section>
+
+  <!-- ══════════════════════════ AJUDA ══════════════════════════ -->
+  <section class="pane" id="mode-ajuda" role="tabpanel" aria-labelledby="tabbtn-ajuda" tabindex="0">
+
+    <button class="btn text hidden" id="helpBack" type="button">
+      <svg class="icon" viewBox="0 0 24 24"><use href="#i-arrow-left"/></svg><span>Voltar</span>
+    </button>
+
+    <div class="help-layout">
+      <nav class="help-nav" aria-label="Tópicos da ajuda">
+        <a href="#h-inicio" class="help-nav-item active">Por onde começar</a>
+        <a href="#h-processo" class="help-nav-item">O processo completo</a>
+        <a href="#h-gerar" class="help-nav-item">Gerar CSR e chave</a>
+        <a href="#h-cnf" class="help-nav-item">Arquivo .cnf</a>
+        <a href="#h-converter" class="help-nav-item">Montar o PFX</a>
+        <a href="#h-inspecionar" class="help-nav-item">Inspecionar</a>
+        <a href="#h-formatos" class="help-nav-item">Formatos de arquivo</a>
+        <a href="#h-instalar" class="help-nav-item">Instalar no servidor</a>
+        <a href="#h-problemas" class="help-nav-item">Problemas comuns</a>
+        <a href="#h-seguranca" class="help-nav-item">Segurança</a>
+        <a class="help-nav-wiki" href="https://github.com/tamanakalucas/Conversor-Certificados/wiki" target="_blank" rel="noopener">
+          <svg class="icon" viewBox="0 0 24 24"><use href="#i-book"/></svg>Wiki completa
+          <svg class="icon ext" viewBox="0 0 24 24"><use href="#i-external"/></svg>
+        </a>
+      </nav>
+
+      <div class="help-content">
+
+        <!-- ───────── Por onde começar ───────── -->
+        <article class="card help-section" id="h-inicio">
+          <h2>Por onde começar</h2>
+          <p>Esta ferramenta cobre três momentos do ciclo de vida de um certificado. Encontre a sua situação:</p>
+          <table class="help-table">
+            <thead><tr><th>Sua situação</th><th>O que fazer</th></tr></thead>
+            <tbody>
+              <tr><td>Preciso de um certificado novo e ainda não tenho nada</td><td>Comece pelo <a href="#h-processo" class="jump">processo completo</a>, depois <b>Gerar CSR</b></td></tr>
+              <tr><td>Já sei o que preciso e quero gerar o pedido</td><td>Aba <b>Gerar CSR</b> → <a href="#h-gerar" class="jump">como usar</a></td></tr>
+              <tr><td>A AC me devolveu o <code>.cer</code> e preciso do <code>.pfx</code></td><td>Aba <b>Converter</b> → <a href="#h-converter" class="jump">montar o PFX</a></td></tr>
+              <tr><td>Recebi um arquivo e não sei o que é</td><td>Aba <b>Inspecionar</b> → <a href="#h-inspecionar" class="jump">como ler</a></td></tr>
+              <tr><td>O certificado vence em breve</td><td><a href="#h-processo" class="jump">Renovação</a> — é o mesmo processo, de novo</td></tr>
+              <tr><td>Deu erro em alguma coisa</td><td><a href="#h-problemas" class="jump">Problemas comuns</a></td></tr>
+            </tbody>
+          </table>
+
+          <div class="msg info show">
+            <svg class="icon" viewBox="0 0 24 24"><use href="#i-lock"/></svg>
+            <span><b>Nada sai da sua máquina.</b> Esta página é estática: não há servidor, backend nem banco de dados. Tudo é processado na memória do navegador. Por isso os arquivos precisam ser baixados na hora — fechou a aba, perdeu.</span>
+          </div>
+        </article>
+
+        <!-- ───────── O processo completo ───────── -->
+        <article class="card help-section" id="h-processo">
+          <h2>O processo completo</h2>
+          <p>A ferramenta faz as etapas <b>1</b>, <b>5</b> e <b>6</b>. As outras acontecem fora daqui — e são elas que costumam gerar dúvida.</p>
+
+          <ol class="timeline">
+            <li class="tl-item tl-you">
+              <span class="tl-num">1</span>
+              <div class="tl-body">
+                <h3>Você gera o CSR e a chave <span class="badge pri">nesta ferramenta</span></h3>
+                <p>Aba <b>Gerar CSR</b>. Saem dois arquivos: o <code>.csr</code>, que vai para a Autoridade Certificadora, e o <code>.key</code>, que fica só com você.</p>
+              </div>
+            </li>
+            <li class="tl-item tl-you">
+              <span class="tl-num">2</span>
+              <div class="tl-body">
+                <h3>Você guarda a chave e abre o chamado</h3>
+                <p>Suba o <code>.key</code> para o cofre de segredos da empresa <b>antes de fechar a aba</b>. Depois abra o chamado para o time de CA anexando <b>apenas o <code>.csr</code></b>.</p>
+              </div>
+            </li>
+            <li class="tl-item tl-them">
+              <span class="tl-num">3</span>
+              <div class="tl-body">
+                <h3>O time de CA valida e emite <span class="badge">fora daqui</span></h3>
+                <p>AC interna costuma levar horas a poucos dias. AC pública depende do tipo de validação: DV sai em minutos, OV em 1–5 dias úteis, EV em 1–2 semanas.</p>
+              </div>
+            </li>
+            <li class="tl-item tl-them">
+              <span class="tl-num">4</span>
+              <div class="tl-body">
+                <h3>Você recebe o certificado emitido <span class="badge">fora daqui</span></h3>
+                <p>Normalmente um <code>.cer</code> ou <code>.crt</code> mais a <b>cadeia</b> (<code>.p7b</code>, bundle ou intermediárias soltas). Às vezes tudo em um arquivo só.</p>
+              </div>
+            </li>
+            <li class="tl-item tl-you">
+              <span class="tl-num">5</span>
+              <div class="tl-body">
+                <h3>Você confere o retorno <span class="badge pri">nesta ferramenta</span></h3>
+                <p>Aba <b>Inspecionar</b>: o CN está certo? Todos os nomes estão no SAN? A validade e o emissor fazem sentido? Corrigir agora custa um chamado; corrigir em produção custa uma indisponibilidade.</p>
+              </div>
+            </li>
+            <li class="tl-item tl-you">
+              <span class="tl-num">6</span>
+              <div class="tl-body">
+                <h3>Você monta o PFX <span class="badge pri">nesta ferramenta</span></h3>
+                <p>Aba <b>Converter</b>: certificado + chave + cadeia → <code>.pfx</code> protegido por senha. É aqui que as duas metades se reencontram.</p>
+              </div>
+            </li>
+            <li class="tl-item tl-you">
+              <span class="tl-num">7</span>
+              <div class="tl-body">
+                <h3>Você instala e valida</h3>
+                <p>Instale no servidor e teste <b>a partir de outra máquina</b>. Depois registre a data de vencimento na monitoração.</p>
+              </div>
+            </li>
+          </ol>
+
+          <h3>O princípio que sustenta tudo</h3>
+          <div class="split">
+            <div class="split-col">
+              <span class="split-title">🔑 Chave privada <code>.key</code></span>
+              <p>Fica <b>só com você</b>, no cofre. Quem tem a chave pode se passar pelo seu serviço.</p>
+              <p class="danger"><b>Nunca</b> vai para a AC, nem por e-mail, chamado ou chat.</p>
+            </div>
+            <div class="split-col">
+              <span class="split-title">📄 CSR <code>.csr</code></span>
+              <p>Contém a chave <b>pública</b>, os dados de identificação e uma assinatura que prova que você tem a metade privada — sem revelá-la.</p>
+              <p>Não é sigiloso. Pode circular à vontade.</p>
+            </div>
+          </div>
+          <div class="msg warn show">
+            <svg class="icon" viewBox="0 0 24 24"><use href="#i-warn"/></svg>
+            <span>Se alguém — inclusive um time interno — pedir a sua chave privada, questione. A AC não precisa dela: o CSR já tem tudo.</span>
+          </div>
+
+          <h3>AC interna ou AC pública?</h3>
+          <table class="help-table">
+            <thead><tr><th></th><th>AC interna</th><th>AC pública</th></tr></thead>
+            <tbody>
+              <tr><td>Confiança</td><td>Só em máquinas com a raiz corporativa instalada</td><td>Qualquer navegador do mundo</td></tr>
+              <tr><td>Uso típico</td><td>Serviços internos, integrações, homologação</td><td>Sites e APIs na internet</td></tr>
+              <tr><td>Prazo</td><td>Horas a poucos dias</td><td>DV: minutos · OV: 1–5 dias · EV: 1–2 semanas</td></tr>
+              <tr><td>Validação</td><td>Aprovação interna, template correto</td><td>Prova de controle do domínio (DNS, HTTP ou e-mail)</td></tr>
+              <tr><td>Nome interno (<code>.local</code>, IP privado)</td><td>✅ Sim</td><td>❌ Não emite</td></tr>
+            </tbody>
+          </table>
+
+          <details>
+            <summary>Modelo de chamado para o time de CA</summary>
+            <pre class="code">Solicitação de emissão de certificado
+
+CN (nome principal) : portal.empresa.com.br
+SANs                : portal.empresa.com.br
+                      www.portal.empresa.com.br
+Tipo de AC          : interna   (ou: externa/pública)
+Finalidade          : TLS de servidor (Server Authentication)
+Ambiente            : produção  (ou: homologação/desenvolvimento)
+Servidor/serviço    : SRV-PORTAL-01 / IIS 10
+Validade desejada   : conforme política
+Responsável técnico : Nome — e-mail — time
+
+Anexo: portal.empresa.com.br.csr</pre>
+            <p class="supporting">Se a AC interna usa <b>templates</b> (caso do Microsoft AD CS), pergunte qual usar — normalmente <code>WebServer</code>. Pedir o template errado costuma resultar em recusa ou em um certificado que não serve.</p>
+          </details>
+
+          <h3>Renovação</h3>
+          <p>Certificado não se renova sozinho: é o mesmo processo, do começo. Comece <b>30 a 45 dias</b> antes em AC interna, ou <b>45 a 60 dias</b> em AC pública com validação OV/EV.</p>
+          <p>Gere <b>chave nova</b> a cada renovação — isso limita a exposição caso a chave antiga tenha vazado sem ninguém perceber. Só descarte a chave antiga depois de confirmar que o certificado novo está funcionando.</p>
+          <div class="msg info show">
+            <svg class="icon" viewBox="0 0 24 24"><use href="#i-info"/></svg>
+            <span>O prazo máximo de validade de certificados públicos vem sendo reduzido progressivamente pelo CA/Browser Forum. Confirme o teto vigente com a sua AC e trate renovação como rotina de calendário — onde for possível, avalie automação (ACME).</span>
+          </div>
+        </article>
+
+        <!-- ───────── Gerar CSR ───────── -->
+        <article class="card help-section" id="h-gerar">
+          <h2>Gerar CSR e chave</h2>
+          <p>Aba <b>Gerar CSR</b>. Cria o par chave privada + solicitação que você envia para a AC.</p>
+
+          <h3>Etapa 1 — Dados do certificado</h3>
+          <table class="help-table">
+            <thead><tr><th>Campo</th><th>O que colocar</th></tr></thead>
+            <tbody>
+              <tr><td><b>CN</b> <span class="req">*</span></td><td>O nome principal do serviço: <code>portal.empresa.com.br</code>. Para curinga: <code>*.empresa.com.br</code></td></tr>
+              <tr><td><b>O</b></td><td>Razão social exata. ACs com validação OV/EV conferem isso</td></tr>
+              <tr><td><b>OU</b></td><td>Departamento — opcional</td></tr>
+              <tr><td><b>L</b> / <b>ST</b></td><td>Cidade por extenso e estado</td></tr>
+              <tr><td><b>C</b></td><td>País com <b>exatamente 2 letras</b>: <code>BR</code></td></tr>
+              <tr><td><b>E-mail</b></td><td>Contato técnico. Muitas ACs públicas ignoram</td></tr>
+            </tbody>
+          </table>
+
+          <h3>SAN — o campo que realmente importa</h3>
+          <div class="msg warn show">
+            <svg class="icon" viewBox="0 0 24 24"><use href="#i-warn"/></svg>
+            <span>Navegadores e clientes modernos validam o nome acessado contra o <b>SAN</b>, não contra o CN. Um nome que não estiver na lista produz erro de certificado — mesmo estando no CN.</span>
+          </div>
+          <p>Digite o nome e pressione <kbd>Enter</kbd>: ele vira um chip com o tipo detectado (DNS, IP, e-mail ou URI). Para adicionar vários de uma vez, cole uma lista separada por vírgula ou quebra de linha. <kbd>Backspace</kbd> com o campo vazio remove o último.</p>
+          <p>O <b>CN aparece como um chip fixo</b>, sem o <code>×</code> — ele entra no CSR de qualquer forma, e é mostrado ali só para deixar isso explícito.</p>
+          <p class="supporting">Um curinga cobre <b>um</b> nível de subdomínio: <code>*.empresa.com.br</code> vale para <code>app.empresa.com.br</code>, mas não para <code>app.rh.empresa.com.br</code> nem para <code>empresa.com.br</code> puro — este precisa entrar no SAN separadamente.</p>
+
+          <h3>Etapa 2 — Chave e assinatura</h3>
+          <table class="help-table">
+            <thead><tr><th>Opção</th><th>Padrão</th><th>Quando mudar</th></tr></thead>
+            <tbody>
+              <tr><td>Tamanho da chave</td><td>RSA 2048</td><td>3072/4096 só por exigência de política — custam mais CPU no handshake</td></tr>
+              <tr><td>Assinatura</td><td>SHA-256</td><td>Só se a AC pedir SHA-384/512</td></tr>
+              <tr><td>Formato da chave</td><td>PKCS#8</td><td>PKCS#1 para equipamentos e softwares antigos</td></tr>
+              <tr><td>Proteger com senha</td><td>Desligado</td><td>Ligue se a chave for circular fora do cofre</td></tr>
+            </tbody>
+          </table>
+          <div class="msg warn show">
+            <svg class="icon" viewBox="0 0 24 24"><use href="#i-warn"/></svg>
+            <span><b>Chave protegida: perdeu a senha, perdeu a chave.</b> Não há recuperação. Guarde a senha no cofre, em item separado. Alguns servidores também pedem a senha a cada inicialização, o que atrapalha reinício automático.</span>
+          </div>
+
+          <h3>Etapa 3 — Resultado</h3>
+          <p><b>Baixe os dois arquivos antes de fechar a aba.</b> Confira no bloco decodificado se subject e SAN saíram como esperado — <code>auto-assinatura: válida</code> confirma que a chave gerada corresponde ao pedido.</p>
+          <p>O botão <b>Usar esta chave no conversor</b> leva a chave para a aba Converter sem passar por disco — útil quando você já tem o certificado emitido em mãos.</p>
+        </article>
+
+        <!-- ───────── Arquivo .cnf ───────── -->
+        <article class="card help-section" id="h-cnf">
+          <h2>Carregar um arquivo <code>.cnf</code></h2>
+          <p>Se o time já mantém arquivos de configuração do OpenSSL, use o segmento <b>Carregar arquivo .cnf</b> em vez de digitar campo a campo. Os campos e os chips de SAN são preenchidos e ficam <b>editáveis</b> antes de gerar.</p>
+          <p>O botão <b>Ver um exemplo</b> preenche um arquivo completo, se você quiser conferir o formato esperado.</p>
+
+          <table class="help-table">
+            <thead><tr><th>Formato aceito</th><th>Exemplo</th></tr></thead>
+            <tbody>
+              <tr><td><code>.cnf</code> com <code>prompt = no</code></td><td><code>[req_distinguished_name]</code> + <code>CN = exemplo.com.br</code></td></tr>
+              <tr><td><code>.cnf</code> em modo prompt</td><td>usa os valores <code>*_default</code></td></tr>
+              <tr><td>SAN por seção</td><td><code>subjectAltName = @alt_names</code> + <code>[alt_names]</code> com <code>DNS.1</code>, <code>IP.1</code></td></tr>
+              <tr><td>SAN inline</td><td><code>subjectAltName = DNS:a.com.br, IP:10.0.0.5</code></td></tr>
+              <tr><td>Linha de subject</td><td><code>/C=BR/O=Empresa/CN=exemplo.com.br</code></td></tr>
+              <tr><td>Pares soltos</td><td><code>CN = exemplo.com.br</code>, um por linha</td></tr>
+            </tbody>
+          </table>
+
+          <p>Nomes abreviados (<code>CN</code>), por extenso (<code>commonName</code>) e numerados (<code>0.organizationName</code>) são todos reconhecidos. Comentários com <code>#</code> são ignorados.</p>
+          <p><code>default_bits</code> e <code>default_md</code> também são lidos. Se o valor não estiver entre as opções da tela, o campo é mantido e um aviso aparece — um arquivo antigo com <code>default_bits = 1024</code> gera esse aviso, e é bom sinal de que precisa ser atualizado.</p>
+
+          <details>
+            <summary>Exemplo completo</summary>
+            <pre class="code">[ req ]
+default_bits       = 2048
+default_md         = sha256
+prompt             = no
+distinguished_name = req_distinguished_name
+req_extensions     = v3_req
+
+[ req_distinguished_name ]
+C  = BR
+ST = SP
+L  = São Paulo
+O  = Minha Empresa LTDA
+OU = TI
+CN = portal.empresa.com.br
+
+[ v3_req ]
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = portal.empresa.com.br
+DNS.2 = www.portal.empresa.com.br
+IP.1  = 10.20.30.40</pre>
+          </details>
+        </article>
+
+        <!-- ───────── Converter ───────── -->
+        <article class="card help-section" id="h-converter">
+          <h2>Montar o PFX (e outras conversões)</h2>
+          <p>Aba <b>Converter</b>, em três etapas: carregar a origem → conferir o que foi detectado → escolher o formato de saída.</p>
+
+          <h3>Receita: juntar o retorno da AC com a sua chave</h3>
+          <ol class="steps">
+            <li>Segmento <b>PEM / CRT + chave</b></li>
+            <li><b>Certificado</b>: o <code>.cer</code>/<code>.crt</code> que a AC devolveu</li>
+            <li><b>Chave privada</b>: o <code>.key</code> que você guardou (+ senha, se tiver)</li>
+            <li><b>Cadeia</b>: o <code>.p7b</code>/bundle da AC — pode enviar vários arquivos de uma vez</li>
+            <li>Clique em <b>Ler certificado</b> e confirme a mensagem verde de correspondência</li>
+            <li>Escolha <b>.PFX / .P12</b>, defina uma senha forte e clique em <b>Converter e baixar</b></li>
+          </ol>
+
+          <h3>A validação chave ↔ certificado</h3>
+          <p>A ferramenta compara o módulo RSA da chave com o do certificado — o mesmo que o OpenSSL faz. Uma das três mensagens aparece:</p>
+          <table class="help-table">
+            <tbody>
+              <tr><td><span class="badge">✔</span></td><td><b>A chave corresponde ao leaf</b> — pode seguir</td></tr>
+              <tr><td><span class="badge warn">!</span></td><td><b>Corresponde a outro certificado da lista</b> — clique em <i>definir como leaf</i> no cartão certo</td></tr>
+              <tr><td><span class="badge err">✖</span></td><td><b>Não corresponde a nenhum</b> — chave errada, veja <a href="#h-problemas" class="jump">Problemas comuns</a></td></tr>
+            </tbody>
+          </table>
+          <p class="supporting">A geração do PFX é bloqueada quando não bate, porque o arquivo resultante não funcionaria em servidor nenhum.</p>
+
+          <h3>Qual formato de saída escolher</h3>
+          <table class="help-table">
+            <thead><tr><th>Formato</th><th>Contém</th><th>Use para</th></tr></thead>
+            <tbody>
+              <tr><td><b>.PFX / .P12</b></td><td>Cadeia + chave, com senha</td><td>IIS, Windows, Azure, F5, appliances</td></tr>
+              <tr><td><b>.PEM</b></td><td>Cadeia + chave (opcional)</td><td>Apache, Nginx, HAProxy</td></tr>
+              <tr><td><b>.CRT / .CER</b></td><td>Só o certificado principal</td><td>Junto com a <code>.key</code> separada</td></tr>
+              <tr><td><b>.KEY</b></td><td>Só a chave privada</td><td>Extrair a chave de um PFX</td></tr>
+              <tr><td><b>.JKS</b></td><td>Só certificados (truststore)</td><td>Java, para confiar em uma AC</td></tr>
+            </tbody>
+          </table>
+
+          <h3>Opções do PFX</h3>
+          <p><b>Algoritmo de cifra:</b> mantenha <b>3DES</b> se o destino for Windows/IIS ou Java antigo. AES-256 é mais moderno, use quando souber que o destino aceita.</p>
+          <p><b>Nome amigável (alias):</b> é como o certificado aparece na lista do Windows/IIS. Use algo reconhecível.</p>
+          <p>A cadeia é montada automaticamente na ordem correta: leaf → intermediária → raiz.</p>
+
+          <details>
+            <summary>Outras receitas</summary>
+            <p><b>Extrair chave e certificado de um PFX (para Nginx/Apache):</b> leia o PFX com a senha → formato <b>.PEM</b> com <i>Incluir a chave privada</i> desligado → depois formato <b>.KEY</b>.</p>
+            <p><b>Trocar a senha de um PFX:</b> leia com a senha antiga → formato <b>.PFX</b> com a senha nova.</p>
+            <p><b>Resolver appliance que recusa o PFX:</b> gere de novo escolhendo <b>3DES</b>. Se o problema for a chave, exporte em <b>PKCS#1</b>.</p>
+            <p><b>JKS com chave privada:</b> gere o <code>.pfx</code> e converta — o comando <code>keytool</code> aparece na própria tela. Desde o Java 9 o PKCS#12 é o padrão, então normalmente o <code>.pfx</code> serve direto.</p>
+          </details>
+        </article>
+
+        <!-- ───────── Inspecionar ───────── -->
+        <article class="card help-section" id="h-inspecionar">
+          <h2>Inspecionar</h2>
+          <p>Aba <b>Inspecionar</b>. Decodifica certificado, cadeia, CSR ou chave — o equivalente a <code>openssl x509 -noout -text</code>, sem terminal. Aceita PEM, DER, base64 puro e <code>.p7b</code>.</p>
+
+          <h3>O que conferir no retorno da AC</h3>
+          <table class="help-table">
+            <thead><tr><th>Campo</th><th>Como ler</th></tr></thead>
+            <tbody>
+              <tr><td><b>subject</b></td><td>Quem é o dono. O <code>CN=</code> é o nome principal</td></tr>
+              <tr><td><b>issuer</b></td><td>Quem emitiu. Se for igual ao subject, o certificado é autoassinado (raiz ou teste)</td></tr>
+              <tr><td><b>SAN</b></td><td><b>Os nomes que os clientes realmente validam.</b> Confira se todos os que você pediu estão aqui</td></tr>
+              <tr><td><b>válido de/até</b></td><td>Com selo de dias restantes ou de expirado</td></tr>
+              <tr><td><b>serial</b></td><td>É o número que se informa em pedido de revogação</td></tr>
+              <tr><td><b>SHA-256</b></td><td>Fingerprint — serve para confirmar que dois arquivos são o mesmo certificado</td></tr>
+            </tbody>
+          </table>
+
+          <h3>Verificar se a cadeia veio completa</h3>
+          <p>Carregue o bundle e confira se o <code>issuer</code> de cada certificado é o <code>subject</code> do seguinte, até chegar a um autoassinado:</p>
+          <pre class="code">Certificado 1:  subject CN=portal.empresa.com.br   issuer CN=AC Intermediária
+Certificado 2:  subject CN=AC Intermediária        issuer CN=AC Raiz      ← encadeia
+Certificado 3:  subject CN=AC Raiz                 issuer CN=AC Raiz      ← raiz</pre>
+          <p class="supporting">Também serve para descobrir o que é um arquivo desconhecido: extensões não são confiáveis, um <code>.cer</code> pode ser texto ou binário e um <code>.crt</code> pode conter a cadeia inteira.</p>
+        </article>
+
+        <!-- ───────── Formatos ───────── -->
+        <article class="card help-section" id="h-formatos">
+          <h2>Formatos de arquivo</h2>
+          <p>A maior fonte de confusão é que <b>a extensão não diz o que tem dentro</b>. Todo arquivo combina uma <b>codificação</b> (PEM = texto, começa com <code>-----BEGIN</code>; DER = binário) com um <b>conteúdo</b>.</p>
+
+          <table class="help-table">
+            <thead><tr><th>Extensão</th><th>Normalmente é</th><th>Tem chave privada?</th></tr></thead>
+            <tbody>
+              <tr><td><code>.pem</code></td><td>Certificado, cadeia e/ou chave</td><td>Às vezes</td></tr>
+              <tr><td><code>.crt</code> <code>.cer</code> <code>.der</code></td><td>Certificado (ou cadeia)</td><td>Não</td></tr>
+              <tr><td><code>.key</code></td><td>Chave privada</td><td class="danger"><b>Sim</b></td></tr>
+              <tr><td><code>.csr</code> <code>.req</code></td><td>Solicitação</td><td>Não — só a pública</td></tr>
+              <tr><td><code>.pfx</code> <code>.p12</code></td><td>Certificado + cadeia + chave</td><td class="danger"><b>Sim</b></td></tr>
+              <tr><td><code>.p7b</code></td><td>Cadeia de certificados</td><td>Não</td></tr>
+              <tr><td><code>.jks</code></td><td>Keystore Java</td><td>Depende</td></tr>
+            </tbody>
+          </table>
+          <p class="supporting"><code>.pfx</code> e <code>.p12</code> são o mesmo formato, duas extensões.</p>
+
+          <h3>Os cabeçalhos PEM</h3>
+          <table class="help-table">
+            <tbody>
+              <tr><td><code>BEGIN CERTIFICATE</code></td><td>Certificado</td></tr>
+              <tr><td><code>BEGIN CERTIFICATE REQUEST</code></td><td>CSR</td></tr>
+              <tr><td><code>BEGIN PRIVATE KEY</code></td><td>Chave PKCS#8, sem senha</td></tr>
+              <tr><td><code>BEGIN RSA PRIVATE KEY</code></td><td>Chave PKCS#1 (formato antigo), sem senha</td></tr>
+              <tr><td><code>BEGIN ENCRYPTED PRIVATE KEY</code></td><td>Chave protegida por senha</td></tr>
+            </tbody>
+          </table>
+
+          <details>
+            <summary>Glossário</summary>
+            <table class="help-table">
+              <tbody>
+                <tr><td><b>CSR</b></td><td>A solicitação, com a chave pública e os dados de identificação</td></tr>
+                <tr><td><b>AC / CA</b></td><td>Autoridade Certificadora — quem emite e assina</td></tr>
+                <tr><td><b>leaf</b></td><td>O certificado do seu servidor, na ponta da cadeia</td></tr>
+                <tr><td><b>intermediária</b></td><td>AC subordinada que assinou o seu certificado</td></tr>
+                <tr><td><b>raiz</b></td><td>AC no topo, autoassinada, já instalada nos sistemas</td></tr>
+                <tr><td><b>CN</b></td><td>Common Name — o nome principal</td></tr>
+                <tr><td><b>SAN</b></td><td>Subject Alternative Name — a lista de nomes que o certificado cobre</td></tr>
+                <tr><td><b>truststore</b></td><td>Repositório de certificados em que se confia (sem chave privada)</td></tr>
+                <tr><td><b>keystore</b></td><td>Repositório com certificado <b>e</b> chave privada</td></tr>
+                <tr><td><b>DV / OV / EV</b></td><td>Níveis de validação: domínio / organização / estendida</td></tr>
+                <tr><td><b>ACME</b></td><td>Protocolo de emissão automatizada</td></tr>
+              </tbody>
+            </table>
+          </details>
+        </article>
+
+        <!-- ───────── Instalar ───────── -->
+        <article class="card help-section" id="h-instalar">
+          <h2>Instalar no servidor</h2>
+          <div class="msg warn show">
+            <svg class="icon" viewBox="0 0 24 24"><use href="#i-warn"/></svg>
+            <span><b>Sempre inclua a cadeia.</b> A falha mais comum em produção não é o certificado errado — é a cadeia incompleta, que funciona no seu navegador e quebra em Java, mobile e integrações.</span>
+          </div>
+
+          <table class="help-table">
+            <thead><tr><th>Plataforma</th><th>Formato</th></tr></thead>
+            <tbody>
+              <tr><td>IIS / Windows</td><td><code>.pfx</code> — importar em Certificados de Servidor, depois vincular no binding HTTPS</td></tr>
+              <tr><td>Apache</td><td><code>.crt</code> + <code>.key</code>; cadeia concatenada no próprio <code>.crt</code> (2.4.8+)</td></tr>
+              <tr><td>Nginx</td><td><code>.crt</code> <b>com a cadeia concatenada</b> + <code>.key</code></td></tr>
+              <tr><td>Tomcat / Java</td><td><code>.p12</code> direto (padrão desde o Java 9) ou <code>.jks</code></td></tr>
+              <tr><td>Kubernetes</td><td><code>kubectl create secret tls</code> com o PEM e a chave</td></tr>
+              <tr><td>Azure</td><td><code>.pfx</code> + senha</td></tr>
+              <tr><td>AWS ACM</td><td>Três textos PEM separados — <b>chave sem senha</b></td></tr>
+            </tbody>
+          </table>
+
+          <h3>Validar depois de instalar</h3>
+          <p>Sempre a partir de <b>outra máquina</b>, nunca do próprio servidor:</p>
+          <pre class="code">openssl s_client -connect portal.empresa.com.br:443 -servername portal.empresa.com.br</pre>
+          <p>Na saída, procure <code>Certificate chain</code> listando 2 ou 3 níveis (não só o <code>0</code>) e <code>Verify return code: 0 (ok)</code>.</p>
+          <ul class="checklist">
+            <li>Cadeado sem aviso em navegador de outra máquina</li>
+            <li>Cadeia completa no <code>s_client</code></li>
+            <li>Todos os nomes do SAN respondem</li>
+            <li>Clientes não-navegador funcionam (Java, .NET, <code>curl</code>, integrações)</li>
+            <li>Data de vencimento registrada na monitoração</li>
+          </ul>
+        </article>
+
+        <!-- ───────── Problemas ───────── -->
+        <article class="card help-section" id="h-problemas">
+          <h2>Problemas comuns</h2>
+
+          <h3>"A chave privada NÃO corresponde ao certificado"</h3>
+          <p>Causas, em ordem de frequência:</p>
+          <ol class="steps">
+            <li><b>Chave de outra emissão</b> — é comum acumular vários <code>.key</code> parecidos. Confira data e nome do arquivo</li>
+            <li><b>Chave de outro ambiente</b> — a de homologação com o certificado de produção</li>
+            <li><b>Certificado errado</b> — o arquivo enviado é a AC intermediária, não o do servidor. Use <i>definir como leaf</i> no cartão certo</li>
+            <li><b>Um novo CSR foi gerado</b> depois de enviar o primeiro — a AC assinou o antigo</li>
+          </ol>
+          <p>Para conferir por fora, os dois comandos precisam devolver o <b>mesmo hash</b>:</p>
+          <pre class="code">openssl x509 -noout -modulus -in certificado.crt | openssl md5
+openssl rsa  -noout -modulus -in chave.key       | openssl md5</pre>
+          <p class="danger">Se não achar a chave correta, não há recuperação: gere um novo CSR e peça reemissão.</p>
+
+          <h3>"Senha da chave incorreta"</h3>
+          <p>A senha da <b>chave</b> e a senha do <b>PFX</b> são coisas diferentes e costumam ser confundidas. Confira no cofre. Não há recuperação possível.</p>
+
+          <h3>"Este arquivo contém uma chave privada, não um certificado"</h3>
+          <p>Os campos foram trocados — o <code>.key</code> foi colocado no campo do certificado.</p>
+
+          <h3>"Apenas chaves RSA são suportadas"</h3>
+          <p>A biblioteca usada não trabalha com curvas elípticas para CSR e PKCS#12. Para chaves ECDSA, use o OpenSSL diretamente.</p>
+
+          <h3>Navegador acusa certificado não confiável</h3>
+          <p>Quase sempre é <b>cadeia incompleta</b>. Refaça o PFX incluindo o arquivo de cadeia, ou concatene as intermediárias no <code>.crt</code> (Nginx/Apache).</p>
+          <p>Em AC interna há uma segunda causa: a <b>raiz corporativa não está instalada</b> na máquina cliente — aí o problema não é o certificado, é a distribuição da raiz.</p>
+
+          <h3>"O nome do certificado não confere"</h3>
+          <p>O nome acessado não está no <b>SAN</b>. Confira na aba Inspecionar quais nomes o certificado cobre. Se faltou um, é reemissão.</p>
+
+          <h3>Fechei a aba antes de baixar a chave</h3>
+          <p>Não há recuperação — nada é salvo, nem no navegador nem em servidor. Gere um novo CSR.</p>
+
+          <h3>Perdi a chave privada depois da emissão</h3>
+          <p>O certificado emitido fica inutilizável. Gere um novo par e peça reemissão — e peça também a <b>revogação</b> do anterior: se a chave se perdeu, você não sabe se ela vazou.</p>
+        </article>
+
+        <!-- ───────── Segurança ───────── -->
+        <article class="card help-section" id="h-seguranca">
+          <h2>Segurança</h2>
+
+          <h3>Como esta página trata os seus dados</h3>
+          <table class="help-table">
+            <tbody>
+              <tr><td>Onde o processamento acontece</td><td>Na memória do navegador</td></tr>
+              <tr><td>O que é enviado pela rede</td><td><b>Nada</b> — nem arquivos, nem senhas, nem chaves</td></tr>
+              <tr><td>O que fica armazenado</td><td>Só a preferência de tema claro/escuro</td></tr>
+              <tr><td>Requisições externas</td><td>Somente as fontes, com fallback para as do sistema</td></tr>
+            </tbody>
+          </table>
+          <p class="supporting">Dá para verificar sem confiar na palavra de ninguém: abra as Ferramentas do Desenvolvedor (F12) na aba Rede e gere um CSR — nenhuma requisição aparece. Com a página já carregada, ela também funciona com a rede desligada.</p>
+
+          <h3>O que pode circular e o que não pode</h3>
+          <table class="help-table">
+            <thead><tr><th>Arquivo</th><th>Pode ir por e-mail/chamado?</th></tr></thead>
+            <tbody>
+              <tr><td><code>.csr</code></td><td>✅ Sim — não é sigiloso</td></tr>
+              <tr><td>Certificado emitido</td><td>✅ Sim — é público por definição</td></tr>
+              <tr><td>Cadeia</td><td>✅ Sim</td></tr>
+              <tr><td class="danger"><b><code>.key</code></b></td><td class="danger"><b>❌ Nunca</b></td></tr>
+              <tr><td class="danger"><b><code>.pfx</code> / <code>.p12</code></b></td><td class="danger"><b>❌ Nunca</b> — contém a chave</td></tr>
+              <tr><td>Senhas</td><td>❌ Nunca junto com o arquivo</td></tr>
+            </tbody>
+          </table>
+
+          <h3>Onde guardar a chave</h3>
+          <p>Cofre de segredos corporativo (Vault, CyberArk, Key Vault, Secrets Manager) ou gerenciador de senhas corporativo com anexos. Guarde junto: onde o certificado está instalado, quando vence e a senha do PFX — em item separado da chave.</p>
+          <p><b>Nunca</b> em repositório Git, anexo de e-mail, chat, pasta de rede sem controle de acesso ou na pasta Downloads esquecida.</p>
+          <p class="supporting">Terminou de instalar? Apague os arquivos temporários da máquina local. A cópia oficial é a do cofre.</p>
+
+          <h3>Checklist de emissão</h3>
+          <ul class="checklist">
+            <li>SANs conferidos com quem opera o serviço</li>
+            <li>Chave baixada e guardada no cofre <b>antes de fechar a aba</b></li>
+            <li>Apenas o <code>.csr</code> anexado ao chamado</li>
+            <li>Retorno da AC conferido na aba Inspecionar</li>
+            <li>Cadeia incluída no <code>.pfx</code></li>
+            <li>Senha do PFX no cofre, em item separado</li>
+            <li>Instalado e validado a partir de outra máquina</li>
+            <li>Vencimento registrado na monitoração</li>
+            <li>Arquivos temporários apagados da máquina local</li>
+          </ul>
+
+          <h3>Quando pedir revogação</h3>
+          <p>Se a chave vazou ou se perdeu, se alguém com acesso saiu da empresa sem rotação, se o certificado saiu com dados errados ou se o serviço foi desativado. Informe ao time de CA o <b>número de série</b> (visível na aba Inspecionar), o CN e o motivo.</p>
+        </article>
+
+        <div class="help-more">
+          <p>Precisa de mais detalhe — instalação passo a passo por plataforma, todos os formatos de <code>.cnf</code>, perguntas frequentes?</p>
+          <a class="btn tonal" href="https://github.com/tamanakalucas/Conversor-Certificados/wiki" target="_blank" rel="noopener">
+            <svg class="icon" viewBox="0 0 24 24"><use href="#i-book"/></svg>Abrir a wiki completa
+            <svg class="icon" viewBox="0 0 24 24"><use href="#i-external"/></svg>
+          </a>
+        </div>
+
+      </div>
+    </div>
   </section>
 
 </main>
