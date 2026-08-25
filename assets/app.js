@@ -1,5 +1,6 @@
 /* Central de Certificados — geração de CSR/chave, conversão entre formatos e inspeção.
-   100% client-side, criptografia via node-forge (vendor/forge.min.js). */
+   100% client-side, criptografia via node-forge (vendor/forge.min.js).
+   Interface seguindo Material Design 3. */
 (function () {
   'use strict';
 
@@ -12,28 +13,39 @@
   var parsedKey = null;   // chave privada RSA carregada na etapa 1
   var selectedFmt = null;
   var sessionKey = null;  // {key, pem, name} — chave gerada na aba "Gerar CSR"
-  var generated = null;   // {csrPem, keyPem, base}
+  var generated = null;   // {csrPem, keyPem, base, key}
+  var sanList = [];       // SANs adicionados como chips
 
   /* ============================================================
-     Helpers genéricos
+     Helpers
      ============================================================ */
   function $(id) { return document.getElementById(id); }
   function $$(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function svgIcon(name, cls) {
+    return '<svg class="icon ' + (cls || '') + '" viewBox="0 0 24 24"><use href="#i-' + name + '"/></svg>';
+  }
 
+  var MSG_ICON = { success: 'check', error: 'error', warn: 'warn', info: 'info' };
   function showMsg(el, text, type) {
     el.className = 'msg ' + type;
-    el.textContent = text;
-    el.style.display = 'block';
+    el.innerHTML = svgIcon(MSG_ICON[type] || 'info') + '<span>' + esc(text) + '</span>';
   }
   function showMsgHtml(el, html, type) {
     el.className = 'msg ' + type;
-    el.innerHTML = html;
-    el.style.display = 'block';
+    el.innerHTML = svgIcon(MSG_ICON[type] || 'info') + '<span>' + html + '</span>';
   }
-  function clearMsg(el) { el.style.display = 'none'; el.textContent = ''; }
+  function clearMsg(el) { el.className = 'msg'; el.innerHTML = ''; }
 
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  var snackTimer = null;
+  function snack(text) {
+    var el = $('snackbar');
+    el.textContent = text;
+    el.classList.add('show');
+    clearTimeout(snackTimer);
+    snackTimer = setTimeout(function () { el.classList.remove('show'); }, 3600);
   }
 
   function ab2binstr(buf) {
@@ -59,9 +71,7 @@
       r.readAsArrayBuffer(file);
     });
   }
-  function readFileAsBinStr(file) {
-    return readFileAsArrayBuffer(file).then(ab2binstr);
-  }
+  function readFileAsBinStr(file) { return readFileAsArrayBuffer(file).then(ab2binstr); }
   function readFileAsText(file) {
     return new Promise(function (res, rej) {
       var r = new FileReader();
@@ -79,10 +89,12 @@
   }
   function downloadText(text, filename) {
     triggerDownload(new Blob([text], { type: 'text/plain;charset=utf-8' }), filename);
+    snack('Arquivo baixado: ' + filename);
   }
   function downloadBinary(u8orBinStr, filename, mime) {
     var u8 = (typeof u8orBinStr === 'string') ? binStrToUint8(u8orBinStr) : u8orBinStr;
     triggerDownload(new Blob([u8], { type: mime || 'application/octet-stream' }), filename);
+    snack('Arquivo baixado: ' + filename);
   }
   function safeName(s, fallback) {
     s = (s || '').trim().replace(/^\*\./, 'wildcard.').replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '');
@@ -90,44 +102,69 @@
   }
 
   /* ============================================================
-     Navegação: modos (topo) e abas (dentro dos painéis)
+     Tema
+     ============================================================ */
+  var root = document.documentElement;
+  try {
+    var saved = localStorage.getItem('certkit-theme');
+    if (saved) root.setAttribute('data-theme', saved);
+  } catch (e) {}
+  $('themeToggle').addEventListener('click', function () {
+    var cur = root.getAttribute('data-theme') || 'dark';
+    var next = cur === 'light' ? 'dark' : 'light';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('certkit-theme', next); } catch (e) {}
+    snack(next === 'light' ? 'Tema claro' : 'Tema escuro');
+  });
+
+  /* ============================================================
+     Navegação: tabs primárias e segmented buttons
      ============================================================ */
   function showMode(name) {
-    $$('.mode-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.mode === name); });
-    $$('.mode-pane').forEach(function (p) { p.classList.toggle('active', p.id === 'mode-' + name); });
+    $$('.tab').forEach(function (b) {
+      var on = b.dataset.mode === name;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    $$('.pane').forEach(function (p) { p.classList.toggle('active', p.id === 'mode-' + name); });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-  $$('.mode-btn').forEach(function (b) {
+  $$('.tab').forEach(function (b) {
     b.addEventListener('click', function () { showMode(b.dataset.mode); });
   });
 
-  // cada grupo .tabs controla apenas os .tab-pane irmãos do próprio grupo
-  $$('.tabs').forEach(function (group) {
-    var container = group.parentElement;
-    var panes = $$('.tab-pane', container).filter(function (p) { return p.parentElement === container; });
-    $$('.tab-btn', group).forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        $$('.tab-btn', group).forEach(function (b) { b.classList.remove('active'); });
-        panes.forEach(function (p) { p.classList.remove('active'); });
-        btn.classList.add('active');
-        var pane = $('tab-' + btn.dataset.tab);
-        if (pane) pane.classList.add('active');
-        if (container.querySelector('#sourceMsg')) clearMsg($('sourceMsg'));
+  $$('.segment').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var group = btn.dataset.seg;
+      $$('.segment[data-seg="' + group + '"]').forEach(function (b) {
+        var on = b === btn;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+        var pane = $(b.dataset.target);
+        if (pane) pane.classList.toggle('active', on);
       });
     });
   });
 
+  /* senha: olho */
+  $$('.tf-trailing').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var input = $(b.dataset.pw);
+      var vis = input.type === 'text';
+      input.type = vis ? 'password' : 'text';
+      b.innerHTML = svgIcon(vis ? 'eye' : 'eye-off');
+      b.setAttribute('aria-label', vis ? 'Mostrar senha' : 'Ocultar senha');
+    });
+  });
+
+  /* copiar */
   $$('.copy').forEach(function (b) {
     b.addEventListener('click', function () {
       var ta = $(b.dataset.target);
-      var flash = function () {
-        var old = b.textContent;
-        b.textContent = 'copiado!';
-        setTimeout(function () { b.textContent = old; }, 1600);
-      };
+      var done = function () { snack('Copiado para a área de transferência'); };
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(ta.value).then(flash, function () { legacyCopy(ta); flash(); });
-      } else { legacyCopy(ta); flash(); }
+        navigator.clipboard.writeText(ta.value).then(done, function () { legacyCopy(ta); done(); });
+      } else { legacyCopy(ta); done(); }
     });
   });
   function legacyCopy(ta) {
@@ -139,7 +176,74 @@
   }
 
   /* ============================================================
-     Parsing de certificados e chaves (PEM, DER, base64 puro, PKCS#7)
+     Dropzones
+     ============================================================ */
+  function makeDrop(zoneId, inputId, onFiles) {
+    var zone = $(zoneId), input = $(inputId);
+    var body = Array.prototype.slice.call(zone.children).filter(function (el) { return el !== input; });
+    var fileEl = document.createElement('div');
+    fileEl.className = 'dz-file';
+    fileEl.hidden = true;
+    zone.appendChild(fileEl);
+
+    function setFiles(names) {
+      if (!names || !names.length) {
+        body.forEach(function (e) { e.style.display = ''; });
+        fileEl.hidden = true;
+        zone.classList.remove('filled');
+        input.value = '';
+      } else {
+        body.forEach(function (e) { e.style.display = 'none'; });
+        fileEl.hidden = false;
+        fileEl.innerHTML = svgIcon('file') + '<span class="dz-title">' + esc(names.join(', ')) +
+          '</span><button type="button" class="dz-clear" aria-label="Remover arquivo">' + svgIcon('trash') + '</button>';
+        zone.classList.add('filled');
+      }
+    }
+
+    fileEl.addEventListener('click', function (e) {
+      var btn = e.target.closest('.dz-clear');
+      if (!btn) return;
+      e.stopPropagation();
+      setFiles(null);
+      onFiles([], setFiles);
+    });
+
+    zone.addEventListener('click', function (e) {
+      if (e.target.closest('.dz-clear')) return;
+      input.click();
+    });
+    zone.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); }
+    });
+    ['dragenter', 'dragover'].forEach(function (ev) {
+      zone.addEventListener(ev, function (e) { e.preventDefault(); zone.classList.add('over'); });
+    });
+    ['dragleave', 'drop'].forEach(function (ev) {
+      zone.addEventListener(ev, function (e) { e.preventDefault(); zone.classList.remove('over'); });
+    });
+    zone.addEventListener('drop', function (e) {
+      var files = Array.prototype.slice.call(e.dataTransfer.files || []);
+      if (!files.length) return;
+      try {
+        var dt = new DataTransfer();
+        files.forEach(function (f) { dt.items.add(f); });
+        input.files = dt.files;
+      } catch (err) {}
+      setFiles(files.map(function (f) { return f.name; }));
+      onFiles(files, setFiles);
+    });
+    input.addEventListener('change', function () {
+      var files = Array.prototype.slice.call(input.files || []);
+      setFiles(files.map(function (f) { return f.name; }));
+      if (files.length) onFiles(files, setFiles);
+    });
+
+    return setFiles;
+  }
+
+  /* ============================================================
+     Parsing de certificados e chaves
      ============================================================ */
   function looksPem(bin) { return bin.indexOf('-----BEGIN') !== -1; }
 
@@ -222,7 +326,7 @@
   }
 
   /* ============================================================
-     Metadados / renderização de detalhes
+     Metadados / renderização
      ============================================================ */
   function dnToString(attrs) {
     return (attrs || []).map(function (a) { return (a.shortName || a.name || a.type) + '=' + a.value; }).join(', ');
@@ -275,19 +379,19 @@
     });
     return html + '</dl></div>';
   }
-  function certDump(cert, title) {
+  function validityBadge(cert) {
     var now = new Date();
-    var expired = cert.validity.notAfter < now;
-    var notYet = cert.validity.notBefore > now;
+    if (cert.validity.notAfter < now) return '<span class="badge err">expirado</span>';
+    if (cert.validity.notBefore > now) return '<span class="badge warn">ainda não válido</span>';
     var days = Math.round((cert.validity.notAfter - now) / 86400000);
-    var status = expired ? '<span class="badge expired">expirado</span>'
-      : notYet ? '<span class="badge expired">ainda não válido</span>'
-      : '<span class="badge">válido · ' + days + ' dia(s)</span>';
+    return '<span class="badge">válido · ' + days + ' dia(s)</span>';
+  }
+  function certDump(cert, title) {
     return dumpBlock(title || 'Certificado', [
       ['subject', dnToString(cert.subject.attributes)],
       ['issuer', dnToString(cert.issuer.attributes)],
       ['válido de', fmtDate(cert.validity.notBefore)],
-      ['válido até', esc(fmtDate(cert.validity.notAfter)) + ' ' + status, 'html'],
+      ['válido até', esc(fmtDate(cert.validity.notAfter)) + ' ' + validityBadge(cert), 'html'],
       ['SAN', altNamesOf(cert).join(', ')],
       ['chave pública', keyInfo(cert.publicKey)],
       ['serial', cert.serialNumber],
@@ -306,7 +410,75 @@
   }
 
   /* ============================================================
-     ABA: GERAR CSR — leitura de arquivo .cnf do OpenSSL
+     SAN — chips
+     ============================================================ */
+  function sanType(v) {
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(v) || /^[0-9a-f:]+:[0-9a-f:]*$/i.test(v)) return 'IP';
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return 'email';
+    if (/^[a-z][a-z0-9+.-]*:\/\//i.test(v)) return 'URI';
+    return 'DNS';
+  }
+  function cnAsSan() {
+    var cn = $('g_cn').value.trim();
+    return (cn && /^[A-Za-z0-9*._-]+\.[A-Za-z]{2,}$/.test(cn)) ? cn : null;
+  }
+  function renderChips() {
+    var host = $('sanChips');
+    host.innerHTML = '';
+    var cn = cnAsSan();
+    var seen = {};
+    if (cn && sanList.indexOf(cn) === -1) {
+      seen[cn.toLowerCase()] = 1;
+      host.insertAdjacentHTML('beforeend',
+        '<span class="chip" title="Incluído automaticamente a partir do CN">' +
+        '<span class="chip-type">' + sanType(cn) + '</span><span class="chip-text">' + esc(cn) + '</span></span>');
+    }
+    sanList.forEach(function (v, i) {
+      if (seen[v.toLowerCase()]) return;
+      seen[v.toLowerCase()] = 1;
+      host.insertAdjacentHTML('beforeend',
+        '<span class="chip"><span class="chip-type">' + sanType(v) + '</span>' +
+        '<span class="chip-text">' + esc(v) + '</span>' +
+        '<button type="button" data-i="' + i + '" aria-label="Remover ' + esc(v) + '">' + svgIcon('close') + '</button></span>');
+    });
+  }
+  function addSan(raw) {
+    String(raw).split(/[\n,;\s]+/).forEach(function (v) {
+      v = v.trim();
+      if (!v) return;
+      if (sanList.some(function (x) { return x.toLowerCase() === v.toLowerCase(); })) return;
+      sanList.push(v);
+    });
+    renderChips();
+  }
+  $('sanChips').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-i]');
+    if (!btn) return;
+    sanList.splice(+btn.dataset.i, 1);
+    renderChips();
+  });
+  $('sanInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ',' || e.key === ';') {
+      e.preventDefault();
+      if (this.value.trim()) { addSan(this.value); this.value = ''; }
+    } else if (e.key === 'Backspace' && !this.value && sanList.length) {
+      sanList.pop(); renderChips();
+    }
+  });
+  $('sanInput').addEventListener('blur', function () {
+    if (this.value.trim()) { addSan(this.value); this.value = ''; }
+  });
+  $('sanInput').addEventListener('paste', function (e) {
+    var txt = (e.clipboardData || window.clipboardData).getData('text');
+    if (txt && /[\n,;]/.test(txt)) { e.preventDefault(); addSan(txt); this.value = ''; }
+  });
+  $('sanField').addEventListener('click', function (e) {
+    if (e.target === this || e.target.id === 'sanChips') $('sanInput').focus();
+  });
+  $('g_cn').addEventListener('input', renderChips);
+
+  /* ============================================================
+     GERAR CSR — arquivo .cnf do OpenSSL
      ============================================================ */
   var DN_ALIASES = {
     c: 'C', countryname: 'C',
@@ -318,9 +490,8 @@
     e: 'E', email: 'E', emailaddress: 'E'
   };
 
-  /* Converte um openssl.cnf (ou variantes simples) em {dn, sans, bits, digest, warnings} */
   function parseCnf(text) {
-    var sections = { '': [] };   // nome -> [[chave, valor], ...] (ordem preservada)
+    var sections = { '': [] };
     var current = '';
     var subjectLine = null;
 
@@ -334,7 +505,6 @@
         if (!sections[current]) sections[current] = [];
         return;
       }
-      // linha de subject no formato /C=BR/O=Empresa/CN=exemplo.com.br
       if (line.charAt(0) === '/' && line.indexOf('=') !== -1) { subjectLine = line; return; }
 
       var eq = line.indexOf('=');
@@ -355,7 +525,6 @@
     var reqPrompt = (get('req', 'prompt') || '').toLowerCase();
     var promptMode = reqPrompt !== '' && reqPrompt !== 'no';
 
-    /* ---- Subject ---- */
     if (subjectLine) {
       subjectLine.split('/').forEach(function (part) {
         var eq = part.indexOf('=');
@@ -367,7 +536,7 @@
 
     var dnSecName = (get('req', 'distinguished_name') || 'req_distinguished_name').toLowerCase();
     var dnPairs = sections[dnSecName] || [];
-    if (!dnPairs.length) dnPairs = sections[''] || [];   // pares soltos, sem seção
+    if (!dnPairs.length) dnPairs = sections[''] || [];
 
     var defaults = {};
     dnPairs.forEach(function (p) {
@@ -378,22 +547,21 @@
     dnPairs.forEach(function (p) {
       var key = p[0];
       if (/_(default|min|max)$/i.test(key)) return;
-      var base = key.toLowerCase().replace(/^\d+\./, '');   // "0.organizationName" -> "organizationname"
+      var base = key.toLowerCase().replace(/^\d+\./, '');
       var norm = DN_ALIASES[base];
       if (!norm) return;
-      var val = defaults.hasOwnProperty(base) ? defaults[base] : p[1];
-      if (defaults.hasOwnProperty(base) === false && promptMode) {
+      var has = defaults.hasOwnProperty(base);
+      if (!has && promptMode) {
         warnings.push(key + ' ignorado (arquivo em modo prompt e sem ' + key + '_default)');
         return;
       }
+      var val = has ? defaults[base] : p[1];
       if (val) dn[norm] = val;
     });
 
-    /* ---- SAN ---- */
     var extSecName = (get('req', 'req_extensions') || get('req', 'x509_extensions') || 'v3_req').toLowerCase();
     var sanValue = get(extSecName, 'subjectaltname');
     if (!sanValue) {
-      // procura subjectAltName em qualquer seção
       Object.keys(sections).some(function (s) {
         var v = get(s, 'subjectaltname');
         if (v) { sanValue = v; return true; }
@@ -403,10 +571,9 @@
     if (sanValue) {
       var ref = sanValue.match(/^@\s*(.+)$/);
       if (ref) {
-        (sections[ref[1].trim().toLowerCase()] || []).forEach(function (p) {
-          if (p[1]) sans.push(p[1]);
-        });
-        if (!sections[ref[1].trim().toLowerCase()]) warnings.push('seção [' + ref[1].trim() + '] referenciada em subjectAltName não foi encontrada');
+        var refName = ref[1].trim().toLowerCase();
+        if (!sections[refName]) warnings.push('seção [' + ref[1].trim() + '] referenciada em subjectAltName não foi encontrada');
+        (sections[refName] || []).forEach(function (p) { if (p[1]) sans.push(p[1]); });
       } else {
         sanValue.split(',').forEach(function (item) {
           var v = item.trim().replace(/^(DNS|IP|IP\.\d+|email|URI|otherName)\s*:\s*/i, '');
@@ -415,10 +582,11 @@
       }
     }
 
-    var bits = get('req', 'default_bits');
-    var digest = (get('req', 'default_md') || '').toLowerCase();
-
-    return { dn: dn, sans: sans, bits: bits, digest: digest, warnings: warnings };
+    return {
+      dn: dn, sans: sans, warnings: warnings,
+      bits: get('req', 'default_bits'),
+      digest: (get('req', 'default_md') || '').toLowerCase()
+    };
   }
 
   function applyCnf(parsed) {
@@ -428,8 +596,8 @@
       if (parsed.dn[k]) { $(map[k]).value = parsed.dn[k]; filled.push(k); }
     });
 
-    var sans = parsed.sans.filter(function (s, i, arr) { return arr.indexOf(s) === i; });
-    if (sans.length) $('g_sans').value = sans.join('\n');
+    if (parsed.sans.length) { sanList = []; addSan(parsed.sans.join('\n')); }
+    renderChips();
 
     var extras = [];
     if (parsed.bits && ['2048', '3072', '4096'].indexOf(String(parsed.bits)) !== -1) {
@@ -445,10 +613,10 @@
       parsed.warnings.push('default_md = ' + parsed.digest + ' não suportado — mantido SHA-256');
     }
 
-    if (!filled.length && !sans.length) {
+    if (!filled.length && !parsed.sans.length) {
       throw new Error('Nenhum dado de subject encontrado. Verifique se o arquivo tem uma seção [ req_distinguished_name ] com CN, O, OU, L, ST ou C.');
     }
-    return { filled: filled, sans: sans, extras: extras };
+    return { filled: filled, sans: sanList.slice(), extras: extras };
   }
 
   function loadCnf(text) {
@@ -459,38 +627,45 @@
       var res = applyCnf(parsed);
       var linhas = ['Dados carregados: ' + (res.filled.length ? res.filled.join(', ') : 'nenhum campo de subject')];
       if (res.sans.length) linhas.push(res.sans.length + ' SAN: ' + res.sans.join(', '));
-      if (res.extras.length) linhas.push('opções: ' + res.extras.join(' · '));
-      if (parsed.warnings.length) linhas.push('avisos: ' + parsed.warnings.join(' | '));
-      // leva o usuário aos campos já preenchidos; a mensagem vai para o painel 2, que fica sempre visível
-      var manualBtn = $$('#mode-csr .tab-btn').filter(function (b) { return b.dataset.tab === 'manual'; })[0];
+      if (res.extras.length) linhas.push('Opções: ' + res.extras.join(' · '));
+      if (parsed.warnings.length) linhas.push('Avisos: ' + parsed.warnings.join(' | '));
+
+      var manualBtn = $$('.segment[data-seg="dados"]')[0];
       if (manualBtn) manualBtn.click();
       showMsg($('genMsg'), linhas.join('\n') + '\nRevise os campos acima e clique em "Gerar CSR e chave".',
         parsed.warnings.length ? 'warn' : 'success');
+      snack('Dados do arquivo carregados no formulário');
     } catch (e) {
-      showMsg(msgEl, 'Erro ao ler a configuração.\n' + e.message, 'error');
+      showMsg(msgEl, 'Erro ao ler a configuração. ' + e.message, 'error');
     }
   }
 
-  $('btnLoadCnf').addEventListener('click', function () {
-    var file = $('cnfFile').files[0];
-    var typed = $('cnfText').value.trim();
-    if (!file && !typed) { showMsg($('cnfMsg'), 'Selecione um arquivo .cnf ou cole o conteúdo no campo abaixo.', 'error'); return; }
-    if (file) {
-      readFileAsText(file).then(function (t) { $('cnfText').value = t; loadCnf(t); })
-        .catch(function (e) { showMsg($('cnfMsg'), e.message, 'error'); });
-    } else {
-      loadCnf(typed);
-    }
-  });
-  $('cnfFile').addEventListener('change', function () {
-    var file = this.files[0];
-    if (!file) return;
-    readFileAsText(file).then(function (t) { $('cnfText').value = t; loadCnf(t); })
+  makeDrop('dropCnf', 'cnfFile', function (files) {
+    if (!files.length) return;
+    readFileAsText(files[0]).then(function (t) { $('cnfText').value = t; loadCnf(t); })
       .catch(function (e) { showMsg($('cnfMsg'), e.message, 'error'); });
   });
 
+  $('btnLoadCnf').addEventListener('click', function () {
+    var typed = $('cnfText').value.trim();
+    if (!typed) { showMsg($('cnfMsg'), 'Envie um arquivo .cnf ou cole o conteúdo no campo acima.', 'error'); return; }
+    loadCnf(typed);
+  });
+
+  $('btnExemploCnf').addEventListener('click', function () {
+    $('cnfText').value = [
+      '[ req ]', 'default_bits = 2048', 'default_md = sha256', 'prompt = no',
+      'distinguished_name = req_distinguished_name', 'req_extensions = v3_req', '',
+      '[ req_distinguished_name ]', 'C  = BR', 'ST = SP', 'L  = São Paulo',
+      'O  = Minha Empresa LTDA', 'OU = TI', 'CN = exemplo.com.br', '',
+      '[ v3_req ]', 'subjectAltName = @alt_names', '',
+      '[ alt_names ]', 'DNS.1 = exemplo.com.br', 'DNS.2 = www.exemplo.com.br', 'IP.1  = 192.168.0.10'
+    ].join('\n');
+    showMsg($('cnfMsg'), 'Exemplo preenchido. Clique em "Carregar dados" para aplicá-lo ao formulário.', 'info');
+  });
+
   /* ============================================================
-     ABA: GERAR CSR — geração
+     GERAR CSR — geração
      ============================================================ */
   $('g_protect').addEventListener('change', function () {
     $('g_passRow').classList.toggle('hidden', !this.checked);
@@ -516,18 +691,19 @@
   }
 
   function parseSans() {
-    var lines = $('g_sans').value.split(/[\n,;]+/).map(function (s) { return s.trim(); }).filter(Boolean);
-    var cn = $('g_cn').value.trim();
-    if (cn && /^[A-Za-z0-9*._-]+\.[A-Za-z]{2,}$/.test(cn) && lines.indexOf(cn) === -1) lines.unshift(cn);
+    var lines = sanList.slice();
+    var cn = cnAsSan();
+    if (cn && lines.indexOf(cn) === -1) lines.unshift(cn);
 
     var seen = {}, alt = [];
     lines.forEach(function (v) {
       var k = v.toLowerCase();
       if (seen[k]) return;
       seen[k] = 1;
-      if (/^\d{1,3}(\.\d{1,3}){3}$/.test(v) || /^[0-9a-f:]+:[0-9a-f:]*$/i.test(v)) alt.push({ type: 7, ip: v });
-      else if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) alt.push({ type: 1, value: v });
-      else if (/^[a-z][a-z0-9+.-]*:\/\//i.test(v)) alt.push({ type: 6, value: v });
+      var t = sanType(v);
+      if (t === 'IP') alt.push({ type: 7, ip: v });
+      else if (t === 'email') alt.push({ type: 1, value: v });
+      else if (t === 'URI') alt.push({ type: 6, value: v });
       else alt.push({ type: 2, value: v });
     });
     return alt;
@@ -561,7 +737,7 @@
       pki.rsa.generateKeyPair({ bits: bits, e: 0x10001, workers: -1, workerScript: script }, function (err, kp) {
         if (done) return;
         done = true;
-        if (err) pki.rsa.generateKeyPair(opts, cb);   // fallback sem Web Workers
+        if (err) pki.rsa.generateKeyPair(opts, cb);
         else cb(null, kp);
       });
     } catch (e) {
@@ -575,22 +751,39 @@
     return pki.privateKeyInfoToPem(pki.wrapRsaPrivateKey(pki.privateKeyToAsn1(privateKey)));
   }
 
+  function markError(id, on) {
+    $(id).parentElement.classList.toggle('error', !!on);
+  }
+
   $('btnGenerate').addEventListener('click', function () {
     var btn = this, msgEl = $('genMsg');
     clearMsg(msgEl);
+    ['g_cn', 'g_c', 'g_keyPass', 'g_keyPass2'].forEach(function (id) { markError(id, false); });
 
     var cn = $('g_cn').value.trim();
-    if (!cn) { showMsg(msgEl, 'Informe o Common Name (CN).', 'error'); $('g_cn').focus(); return; }
+    if (!cn) {
+      showMsg(msgEl, 'Informe o Common Name (CN).', 'error');
+      markError('g_cn', true); $('g_cn').focus();
+      var manual = $$('.segment[data-seg="dados"]')[0];
+      if (manual && !manual.classList.contains('active')) manual.click();
+      return;
+    }
 
     var c = $('g_c').value.trim();
-    if (c && !/^[A-Za-z]{2}$/.test(c)) { showMsg(msgEl, 'O país (C) deve ter exatamente 2 letras. Ex.: BR', 'error'); return; }
+    if (c && !/^[A-Za-z]{2}$/.test(c)) {
+      showMsg(msgEl, 'O país (C) deve ter exatamente 2 letras. Ex.: BR', 'error');
+      markError('g_c', true); return;
+    }
     $('g_c').value = c.toUpperCase();
 
     var protect = $('g_protect').checked;
     var pass = $('g_keyPass').value;
     if (protect) {
-      if (!pass) { showMsg(msgEl, 'Informe a senha da chave.', 'error'); return; }
-      if (pass !== $('g_keyPass2').value) { showMsg(msgEl, 'As senhas da chave não conferem.', 'error'); return; }
+      if (!pass) { showMsg(msgEl, 'Informe a senha da chave.', 'error'); markError('g_keyPass', true); return; }
+      if (pass !== $('g_keyPass2').value) {
+        showMsg(msgEl, 'As senhas da chave não conferem.', 'error');
+        markError('g_keyPass2', true); return;
+      }
     }
 
     var bits = parseInt($('g_bits').value, 10);
@@ -601,12 +794,17 @@
     var base = safeName($('g_basename').value || cn, 'certificado');
 
     btn.disabled = true;
-    btn.innerHTML = '<span class="spin"></span>Gerando chave de ' + bits + " bits…";
+    btn.querySelector('.btn-label').textContent = 'Gerando chave de ' + bits + ' bits…';
+    $('genProgress').classList.remove('hidden');
     var t0 = Date.now();
 
     setTimeout(function () {
       generateKeyPair(bits, function (err, keys) {
-        var restore = function () { btn.disabled = false; btn.textContent = 'Gerar CSR e chave'; };
+        var restore = function () {
+          btn.disabled = false;
+          btn.querySelector('.btn-label').textContent = 'Gerar CSR e chave';
+          $('genProgress').classList.add('hidden');
+        };
         if (err) { restore(); showMsg(msgEl, 'Falha ao gerar a chave: ' + err.message, 'error'); return; }
         try {
           var csr = pki.createCertificationRequest();
@@ -627,7 +825,8 @@
           $('cmdCsr').textContent = opensslCsrCommand(subject, alt, bits, digest, base, protect);
           $('panelCsrResult').classList.remove('hidden');
           restore();
-          showMsg(msgEl, 'CSR e chave gerados em ' + ((Date.now() - t0) / 1000).toFixed(1) + 's. Baixe os dois arquivos — a chave não fica salva em lugar nenhum.', 'success');
+          showMsg(msgEl, 'CSR e chave gerados em ' + ((Date.now() - t0) / 1000).toFixed(1) + 's.', 'success');
+          snack('Pronto! Baixe os dois arquivos abaixo');
           $('panelCsrResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
         } catch (e) {
           restore();
@@ -645,8 +844,10 @@
   });
 
   $('btnClearCsr').addEventListener('click', function () {
-    ['g_cn', 'g_o', 'g_ou', 'g_l', 'g_st', 'g_c', 'g_email', 'g_sans', 'g_basename', 'g_keyPass', 'g_keyPass2', 'cnfText'].forEach(function (id) { $(id).value = ''; });
-    $('cnfFile').value = '';
+    ['g_cn', 'g_o', 'g_ou', 'g_l', 'g_st', 'g_c', 'g_email', 'g_basename', 'g_keyPass', 'g_keyPass2', 'cnfText', 'sanInput'].forEach(function (id) { $(id).value = ''; });
+    ['g_cn', 'g_c', 'g_keyPass', 'g_keyPass2'].forEach(function (id) { markError(id, false); });
+    sanList = [];
+    renderChips();
     $('g_bits').value = '2048';
     $('g_digest').value = 'sha256';
     $('g_keyfmt').value = 'pkcs8';
@@ -656,9 +857,9 @@
     $('csrOut').value = ''; $('keyOut').value = '';
     generated = null;
     clearMsg($('genMsg')); clearMsg($('cnfMsg'));
+    snack('Formulário limpo');
   });
 
-  /* passa a chave recém-gerada para o conversor */
   $('sendToConvert').addEventListener('click', function () {
     if (!generated) return;
     sessionKey = { key: generated.key, pem: generated.keyPem, name: generated.base + '.key' };
@@ -667,14 +868,19 @@
     $('useSessionKey').checked = true;
     if (!$('pfxOutAlias').value || $('pfxOutAlias').value === 'certificado') $('pfxOutAlias').value = generated.base;
     showMode('convert');
-    var pemTabBtn = $$('#mode-convert .tab-btn').filter(function (b) { return b.dataset.tab === 'pem'; })[0];
-    if (pemTabBtn) pemTabBtn.click();
-    showMsg($('sourceMsg'), 'Chave gerada nesta sessão pronta para uso. Selecione o certificado emitido pela AC e clique em "Ler certificado".', 'info');
+    $$('.segment[data-seg="src"]')[1].click();
+    showMsg($('sourceMsg'), 'Chave gerada nesta sessão pronta para uso. Envie o certificado emitido pela AC e clique em "Ler certificado".', 'info');
   });
 
   /* ============================================================
-     CONVERSOR — etapa 1: leitura da origem
+     CONVERSOR — etapa 1
      ============================================================ */
+  var resetDrops = ['dropPfx|pfxFile', 'dropCert|certFile', 'dropKey|keyFile', 'dropChain|chainFile']
+    .map(function (pair) {
+      var p = pair.split('|');
+      return makeDrop(p[0], p[1], function () { clearMsg($('sourceMsg')); });
+    });
+
   $('btnParsePfx').addEventListener('click', function () {
     var msgEl = $('sourceMsg'); clearMsg(msgEl);
     var file = $('pfxFile').files[0];
@@ -701,8 +907,9 @@
       renderDetected();
       showMsg(msgEl, 'Certificado lido com sucesso: ' + certBags.length + ' certificado(s)' +
         (parsedKey ? ' + chave privada' : ' (sem chave privada)') + '.', 'success');
+      snack('PFX lido com sucesso');
     }).catch(function (e) {
-      showMsg(msgEl, 'Erro ao ler o PFX/P12 — verifique a senha ou o arquivo.\n' + e.message, 'error');
+      showMsg(msgEl, 'Erro ao ler o PFX/P12 — verifique a senha ou o arquivo. ' + e.message, 'error');
       $('panelDetected').classList.add('hidden');
       $('panelOutput').classList.add('hidden');
     });
@@ -711,7 +918,7 @@
   $('btnParsePem').addEventListener('click', function () {
     var msgEl = $('sourceMsg'); clearMsg(msgEl);
     var certFile = $('certFile').files[0];
-    if (!certFile) { showMsg(msgEl, 'Selecione um arquivo de certificado.', 'error'); return; }
+    if (!certFile) { showMsg(msgEl, 'Selecione o arquivo do certificado.', 'error'); return; }
 
     var chainFiles = Array.prototype.slice.call($('chainFile').files || []);
     var keyFile = $('keyFile').files[0];
@@ -724,7 +931,6 @@
       return Promise.all(chainFiles.map(readFileAsBinStr)).then(function (bins) {
         bins.forEach(function (b) { certs = certs.concat(parseCertificates(b)); });
 
-        // remove duplicados pelo subject+serial
         var seen = {};
         certs = certs.filter(function (c) {
           var k = dnKey(c.subject.attributes) + '#' + c.serialNumber;
@@ -747,15 +953,16 @@
       renderDetected();
       showMsg($('sourceMsg'), 'Certificado lido com sucesso: ' + parsedCerts.length + ' certificado(s)' +
         (parsedKey ? ' + chave privada' + ($('useSessionKey').checked && !$('keyFile').files[0] ? ' (gerada nesta sessão)' : '') : '') + '.', 'success');
+      snack('Certificado lido com sucesso');
     }).catch(function (e) {
-      showMsg($('sourceMsg'), 'Erro ao ler o certificado.\n' + e.message, 'error');
+      showMsg($('sourceMsg'), 'Erro ao ler o certificado. ' + e.message, 'error');
       $('panelDetected').classList.add('hidden');
       $('panelOutput').classList.add('hidden');
     });
   });
 
   /* ============================================================
-     CONVERSOR — etapa 2: conteúdo detectado
+     CONVERSOR — etapa 2
      ============================================================ */
   function guessLeafIndex(items) {
     for (var i = 0; i < items.length; i++) {
@@ -765,7 +972,6 @@
     }
     return 0;
   }
-
   function keyMatches(cert) {
     return !!(parsedKey && cert.publicKey && cert.publicKey.n && cert.publicKey.n.compareTo(parsedKey.n) === 0);
   }
@@ -777,63 +983,59 @@
 
     parsedCerts.forEach(function (item, i) {
       if (typeof item.include === 'undefined') item.include = true;
-      item.isLeaf = (i === leafIdx);
+      if (typeof item.isLeaf === 'undefined' || parsedCerts.every(function (c) { return !c.isLeaf; })) item.isLeaf = (i === leafIdx);
 
       var cert = item.cert;
-      var expired = cert.validity.notAfter < new Date();
       var badges = '';
-      if (item.isLeaf) badges += '<span class="badge leaf">leaf</span>';
-      if (parsedKey && keyMatches(cert)) badges += '<span class="badge key">chave privada</span>';
-      if (expired) badges += '<span class="badge expired">expirado</span>';
+      if (item.isLeaf) badges += '<span class="badge pri">leaf</span>';
+      if (parsedKey && keyMatches(cert)) badges += '<span class="badge">chave privada</span>';
+      badges += validityBadge(cert);
 
-      var card = document.createElement('div');
-      card.className = 'cert-card';
-      card.innerHTML =
-        '<div class="top">' +
-          '<label>' +
-            '<input type="checkbox" data-idx="' + i + '" class="chk-include"' + (item.include ? ' checked' : '') + '>' +
-            esc(cnOf(cert) || dnToString(cert.subject.attributes).split(',')[0] || ('Certificado ' + (i + 1))) +
-            badges +
-          '</label>' +
-          '<label style="margin:0;display:flex;align-items:center;gap:6px;">' +
-            '<input type="radio" name="leafRadio" data-idx="' + i + '" class="rad-leaf"' + (item.isLeaf ? ' checked' : '') + '>' +
-            '<span style="font-size:11px;">definir como leaf</span>' +
-          '</label>' +
+      var el = document.createElement('div');
+      el.className = 'cert-item' + (item.isLeaf ? ' is-leaf' : '');
+      el.innerHTML =
+        '<div class="cert-top">' +
+          '<label class="chk"><input type="checkbox" data-idx="' + i + '" class="chk-include"' + (item.include ? ' checked' : '') + '>' +
+          '<span class="cert-name">' + esc(cnOf(cert) || dnToString(cert.subject.attributes).split(',')[0] || ('Certificado ' + (i + 1))) + '</span></label>' +
+          badges +
+          '<button type="button" class="leaf-toggle' + (item.isLeaf ? ' on' : '') + '" data-idx="' + i + '">' +
+            (item.isLeaf ? 'é o leaf' : 'definir como leaf') + '</button>' +
         '</div>' +
         '<div class="cert-meta">' +
-          'subject: ' + esc(dnToString(cert.subject.attributes)) + '<br>' +
-          'issuer:&nbsp; ' + esc(dnToString(cert.issuer.attributes)) + '<br>' +
-          'válido:&nbsp; ' + esc(fmtDate(cert.validity.notBefore)) + ' → ' + esc(fmtDate(cert.validity.notAfter)) + '<br>' +
-          'serial:&nbsp; ' + esc(cert.serialNumber) +
-          (altNamesOf(cert).length ? '<br>SAN:&nbsp;&nbsp;&nbsp;&nbsp; ' + esc(altNamesOf(cert).join(', ')) : '') +
+          '<b>subject</b> ' + esc(dnToString(cert.subject.attributes)) + '<br>' +
+          '<b>issuer</b> ' + esc(dnToString(cert.issuer.attributes)) + '<br>' +
+          '<b>válido</b> ' + esc(fmtDate(cert.validity.notBefore)) + ' → ' + esc(fmtDate(cert.validity.notAfter)) + '<br>' +
+          '<b>serial</b> ' + esc(cert.serialNumber) +
+          (altNamesOf(cert).length ? '<br><b>SAN</b> ' + esc(altNamesOf(cert).join(', ')) : '') +
         '</div>';
-      list.appendChild(card);
+      list.appendChild(el);
     });
 
     $$('.chk-include', list).forEach(function (chk) {
       chk.addEventListener('change', function (e) { parsedCerts[+e.target.dataset.idx].include = e.target.checked; });
     });
-    $$('.rad-leaf', list).forEach(function (rad) {
-      rad.addEventListener('change', function (e) {
-        var idx = +e.target.dataset.idx;
+    $$('.leaf-toggle', list).forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var idx = +btn.dataset.idx;
         parsedCerts.forEach(function (c, i) { c.isLeaf = (i === idx); });
         renderDetected();
       });
     });
 
-    // validação chave x certificado
     var pairEl = $('pairMsg');
     clearMsg(pairEl);
     if (parsedKey) {
       var leaf = (parsedCerts.find(function (c) { return c.isLeaf; }) || parsedCerts[0]).cert;
       if (keyMatches(leaf)) {
-        showMsg(pairEl, '✔ A chave privada corresponde ao certificado leaf (RSA ' + parsedKey.n.bitLength() + ' bits).', 'success');
+        showMsg(pairEl, 'A chave privada corresponde ao certificado leaf (RSA ' + parsedKey.n.bitLength() + ' bits).', 'success');
       } else if (parsedCerts.some(function (c) { return keyMatches(c.cert); })) {
         showMsg(pairEl, 'A chave corresponde a outro certificado da lista, não ao leaf selecionado. Ajuste qual é o leaf antes de exportar.', 'warn');
       } else {
-        showMsg(pairEl, '✖ A chave privada NÃO corresponde a nenhum certificado carregado. Um PFX gerado assim não funcionaria.', 'error');
+        showMsg(pairEl, 'A chave privada NÃO corresponde a nenhum certificado carregado. Um PFX gerado assim não funcionaria.', 'error');
       }
     }
+    $('pfxNeedKey').classList.toggle('hidden', !!parsedKey);
+    $('keyNeedKey').classList.toggle('hidden', !!parsedKey);
 
     $('panelDetected').classList.remove('hidden');
     $('panelOutput').classList.remove('hidden');
@@ -842,12 +1044,12 @@
   }
 
   /* ============================================================
-     CONVERSOR — etapa 3: formato de saída
+     CONVERSOR — etapa 3
      ============================================================ */
-  $$('.fmt-card').forEach(function (card) {
+  $$('.fmt').forEach(function (card) {
     card.addEventListener('click', function () {
-      $$('.fmt-card').forEach(function (c) { c.classList.remove('selected'); });
-      card.classList.add('selected');
+      $$('.fmt').forEach(function (c) { c.setAttribute('aria-checked', 'false'); });
+      card.setAttribute('aria-checked', 'true');
       selectedFmt = card.dataset.fmt;
       $('optsPem').classList.toggle('hidden', selectedFmt !== 'pem');
       $('optsPfx').classList.toggle('hidden', selectedFmt !== 'pfx');
@@ -866,9 +1068,7 @@
     var alias = $('pfxOutAlias').value.trim() || 'certificado';
     var alg = $('pfxOutAlg').value;
     var temCadeia = parsedCerts.filter(function (c) { return c.include && !c.isLeaf; }).length > 0;
-    var cmd = 'openssl pkcs12 -export \\\n';
-    cmd += '  -inkey chave.key \\\n';
-    cmd += '  -in certificado.crt \\\n';
+    var cmd = 'openssl pkcs12 -export \\\n  -inkey chave.key \\\n  -in certificado.crt \\\n';
     if (temCadeia) cmd += '  -certfile cadeia.crt \\\n';
     cmd += '  -name "' + alias + '" \\\n';
     if (alg === '3des') cmd += '  -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -macalg sha1 \\\n';
@@ -884,7 +1084,6 @@
     $(id).addEventListener('change', refreshPfxCmd);
   });
 
-  /* ---------- builders ---------- */
   function leafCert() {
     return (parsedCerts.find(function (c) { return c.isLeaf; }) || parsedCerts[0]).cert;
   }
@@ -893,7 +1092,6 @@
     if (!included.length) throw new Error('Nenhum certificado selecionado na etapa 2.');
     var leaf = included.filter(function (c) { return c.isLeaf; });
     var rest = included.filter(function (c) { return !c.isLeaf; });
-    // ordena a cadeia: leaf -> emissor -> ... -> raiz
     var ordered = leaf.map(function (c) { return c.cert; });
     var pool = rest.map(function (c) { return c.cert; });
     var current = ordered[0], guard = 0;
@@ -912,9 +1110,7 @@
   function toPkcs8Pem(key) {
     return pki.privateKeyInfoToPem(pki.wrapRsaPrivateKey(pki.privateKeyToAsn1(key)));
   }
-  function outBase() {
-    return safeName(cnOf(leafCert()), 'certificado');
-  }
+  function outBase() { return safeName(cnOf(leafCert()), 'certificado'); }
 
   function buildPemOutput() {
     var out = '';
@@ -924,7 +1120,7 @@
       var fmt = $('pemKeyFormat').value;
       out += (fmt === 'pkcs8' ? toPkcs8Pem(parsedKey) : pki.privateKeyToPem(parsedKey)) + '\n';
     } else if (includeKey && !parsedKey) {
-      throw new Error('Nenhuma chave privada disponível para incluir. Desmarque a opção ou carregue a chave na etapa 1.');
+      throw new Error('Nenhuma chave privada disponível para incluir. Desligue a opção ou carregue a chave na etapa 1.');
     }
     downloadText(out, outBase() + '.pem');
     return out.match(/BEGIN CERTIFICATE/g).length + ' certificado(s)' + (includeKey && parsedKey ? ' + chave privada' : '');
@@ -997,7 +1193,7 @@
     w.u32(0x00000002);
     w.u32(entries.length);
     entries.forEach(function (e) {
-      w.u32(2); // trusted cert tag
+      w.u32(2);
       w.utf(e.alias);
       w.u64(Date.now());
       w.utf('X.509');
@@ -1007,7 +1203,6 @@
     });
     var body = w.toUint8Array();
 
-    // digest de integridade = SHA1( senha(UTF-16BE) + "Mighty Aphrodite"(UTF-8) + body )
     var pwBytes = [];
     for (var i = 0; i < password.length; i++) {
       var code = password.charCodeAt(i);
@@ -1053,19 +1248,35 @@
         case 'key': detail = buildKeyOutput(); break;
         default: throw new Error('Selecione um formato de saída.');
       }
-      showMsg(msgEl, 'Arquivo gerado e baixado com sucesso — ' + detail + '.', 'success');
+      showMsg(msgEl, 'Arquivo gerado e baixado — ' + detail + '.', 'success');
     } catch (e) {
       showMsg(msgEl, e.message, 'error');
     }
   });
 
+  $('btnResetConvert').addEventListener('click', function () {
+    parsedCerts = []; parsedKey = null; selectedFmt = null;
+    ['pfxPassword', 'keyPassword', 'pfxOutPassword', 'jksOutPassword', 'keyOutPassword'].forEach(function (id) { $(id).value = ''; });
+    $('pfxOutAlias').value = 'certificado';
+    $('jksOutAlias').value = 'certificado';
+    $$('.fmt').forEach(function (c) { c.setAttribute('aria-checked', 'false'); });
+    ['optsPem', 'optsPfx', 'optsJks', 'optsKey'].forEach(function (id) { $(id).classList.add('hidden'); });
+    ['sourceMsg', 'pairMsg', 'outputMsg'].forEach(function (id) { clearMsg($(id)); });
+    $('panelDetected').classList.add('hidden');
+    $('panelOutput').classList.add('hidden');
+    $('certList').innerHTML = '';
+    resetDrops.forEach(function (fn) { fn(null); });
+    $('useSessionKey').checked = false;
+    updateConvertEnabled();
+    snack('Conversor reiniciado');
+  });
+
   /* ============================================================
-     ABA: INSPECIONAR
+     INSPECIONAR
      ============================================================ */
-  $('inspectFile').addEventListener('change', function () {
-    var f = this.files[0];
-    if (!f) return;
-    readFileAsBinStr(f).then(function (bin) {
+  makeDrop('dropInspect', 'inspectFile', function (files) {
+    if (!files.length) return;
+    readFileAsBinStr(files[0]).then(function (bin) {
       $('inspectPem').value = looksPem(bin) ? bin : '';
       inspect(bin);
     }).catch(function (e) { showMsg($('inspectMsg'), e.message, 'error'); });
@@ -1076,7 +1287,7 @@
     if (txt) { inspect(txt); return; }
     var f = $('inspectFile').files[0];
     if (f) { readFileAsBinStr(f).then(inspect); return; }
-    showMsg($('inspectMsg'), 'Selecione um arquivo ou cole um PEM.', 'error');
+    showMsg($('inspectMsg'), 'Envie um arquivo ou cole um PEM.', 'error');
   });
 
   function inspect(bin) {
@@ -1113,5 +1324,6 @@
   }
 
   /* init */
+  renderChips();
   refreshPfxCmd();
 })();
