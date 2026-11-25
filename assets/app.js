@@ -1124,6 +1124,8 @@
     }
     $('pfxNeedKey').classList.toggle('hidden', !!parsedKey);
     $('keyNeedKey').classList.toggle('hidden', !!parsedKey);
+    $('jksOutMode').value = parsedKey ? 'keystore' : 'truststore';
+    refreshJksMode();
 
     $('panelDetected').classList.remove('hidden');
     $('panelOutput').classList.remove('hidden');
@@ -1275,32 +1277,82 @@
   ByteWriter.prototype.raw = function (u8arr) { for (var i = 0; i < u8arr.length; i++) this.u8(u8arr[i]); };
   ByteWriter.prototype.toUint8Array = function () { return new Uint8Array(this.bytes); };
 
+  function certDer(cert) {
+    return binStrToUint8(forge.asn1.toDer(pki.certificateToAsn1(cert)).getBytes());
+  }
+  function jksPasswordBytes(password) {
+    // Java usa char[] → 2 bytes por caractere (UTF-16BE)
+    var out = new Uint8Array(password.length * 2);
+    for (var i = 0; i < password.length; i++) {
+      var code = password.charCodeAt(i);
+      out[i * 2] = (code >> 8) & 0xFF; out[i * 2 + 1] = code & 0xFF;
+    }
+    return out;
+  }
+  function sha1Bytes(parts) {
+    var md = forge.md.sha1.create();
+    parts.forEach(function (p) { md.update(uint8ToBinStr(p)); });
+    return binStrToUint8(md.digest().getBytes());
+  }
+
+  /* Protege a chave como o sun.security.provider.KeyProtector (OID 1.3.6.1.4.1.42.2.17.1.1):
+     keystream = SHA1(senha || salt), SHA1(senha || bloco anterior)...; XOR com o PKCS#8;
+     integridade = SHA1(senha || PKCS#8). Resultado = salt(20) || cifrado || check(20). */
+  function jksProtectKey(key, password) {
+    var plain = binStrToUint8(forge.asn1.toDer(pki.wrapRsaPrivateKey(pki.privateKeyToAsn1(key))).getBytes());
+    var pw = jksPasswordBytes(password);
+    var salt = binStrToUint8(forge.random.getBytesSync(20));
+    var enc = new Uint8Array(plain.length);
+    var digest = salt;
+    for (var off = 0; off < plain.length; off += 20) {
+      digest = sha1Bytes([pw, digest]);
+      for (var j = 0; j < 20 && off + j < plain.length; j++) enc[off + j] = plain[off + j] ^ digest[j];
+    }
+    var check = sha1Bytes([pw, plain]);
+    var blob = new Uint8Array(20 + enc.length + 20);
+    blob.set(salt, 0); blob.set(enc, 20); blob.set(check, 20 + enc.length);
+    var asn1 = forge.asn1;
+    var epki = asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [
+      asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [
+        asn1.create(asn1.Class.UNIVERSAL, asn1.Type.OID, false, asn1.oidToDer('1.3.6.1.4.1.42.2.17.1.1').getBytes()),
+        asn1.create(asn1.Class.UNIVERSAL, asn1.Type.NULL, false, '')
+      ]),
+      asn1.create(asn1.Class.UNIVERSAL, asn1.Type.OCTETSTRING, false, uint8ToBinStr(blob))
+    ]);
+    return binStrToUint8(asn1.toDer(epki).getBytes());
+  }
+
+  /* entries: { alias, cert } (TrustedCertEntry) ou { alias, key, chain } (PrivateKeyEntry) */
   function buildJksBytes(entries, password) {
     var w = new ByteWriter();
     w.u32(0xFEEDFEED);
     w.u32(0x00000002);
     w.u32(entries.length);
     entries.forEach(function (e) {
-      w.u32(2);
-      w.utf(e.alias);
-      w.u64(Date.now());
-      w.utf('X.509');
-      var certDerBytes = binStrToUint8(forge.asn1.toDer(pki.certificateToAsn1(e.cert)).getBytes());
-      w.u32(certDerBytes.length);
-      w.raw(certDerBytes);
+      if (e.key) {
+        w.u32(1);
+        w.utf(e.alias);
+        w.u64(Date.now());
+        var protectedKey = jksProtectKey(e.key, e.keyPassword || password);
+        w.u32(protectedKey.length);
+        w.raw(protectedKey);
+        w.u32(e.chain.length);
+        e.chain.forEach(function (c) {
+          var der = certDer(c);
+          w.utf('X.509'); w.u32(der.length); w.raw(der);
+        });
+      } else {
+        w.u32(2);
+        w.utf(e.alias);
+        w.u64(Date.now());
+        w.utf('X.509');
+        var der = certDer(e.cert);
+        w.u32(der.length);
+        w.raw(der);
+      }
     });
     var body = w.toUint8Array();
-
-    var pwBytes = [];
-    for (var i = 0; i < password.length; i++) {
-      var code = password.charCodeAt(i);
-      pwBytes.push((code >> 8) & 0xFF, code & 0xFF);
-    }
-    var md = forge.md.sha1.create();
-    md.update(uint8ToBinStr(new Uint8Array(pwBytes)));
-    md.update(uint8ToBinStr(new TextEncoder().encode('Mighty Aphrodite')));
-    md.update(uint8ToBinStr(body));
-    var digestBytes = binStrToUint8(md.digest().getBytes());
+    var digestBytes = sha1Bytes([jksPasswordBytes(password), new TextEncoder().encode('Mighty Aphrodite'), body]);
 
     var final = new Uint8Array(body.length + digestBytes.length);
     final.set(body, 0);
@@ -1311,7 +1363,21 @@
   function buildJksOutput() {
     var password = $('jksOutPassword').value;
     if (!password) throw new Error('Defina uma senha para o keystore JKS.');
-    var aliasBase = ($('jksOutAlias').value || 'certificado').toLowerCase().replace(/\s+/g, '-');
+    if (password.length < 6) throw new Error('O keytool/Java exige senha de keystore com pelo menos 6 caracteres.');
+    var aliasBase = ($('jksOutAlias').value || 'certificado').trim().toLowerCase().replace(/\s+/g, '-');
+    var mode = $('jksOutMode').value;
+
+    if (mode === 'keystore') {
+      if (!parsedKey) throw new Error('É necessária uma chave privada carregada na etapa 1 para gerar um keystore JKS. Para só certificados, escolha "Truststore".');
+      var chain = selectedCertsOrdered();
+      if (!keyMatches(chain[0])) {
+        throw new Error('A chave privada não corresponde ao certificado leaf. Corrija a etapa 1/2 antes de gerar o JKS.');
+      }
+      var bytes = buildJksBytes([{ alias: aliasBase, key: parsedKey, chain: chain }], password);
+      downloadBinary(bytes, outBase() + '.jks', 'application/octet-stream');
+      return 'keystore com chave privada + ' + chain.length + ' certificado(s) na cadeia, alias "' + aliasBase + '"';
+    }
+
     var included = parsedCerts.filter(function (c) { return c.include; });
     if (!included.length) throw new Error('Nenhum certificado selecionado.');
     var entries = included.map(function (c, i) {
@@ -1320,6 +1386,15 @@
     downloadBinary(buildJksBytes(entries, password), 'truststore.jks', 'application/octet-stream');
     return included.length + ' certificado(s) confiável(is)';
   }
+
+  function refreshJksMode() {
+    var ks = $('jksOutMode').value === 'keystore';
+    $('jksNeedKey').classList.toggle('hidden', !ks || !!parsedKey);
+    $('jksKeystoreInfo').classList.toggle('hidden', !ks);
+    $('jksTomcatHelp').classList.toggle('hidden', !ks);
+    $('jksTruststoreInfo').classList.toggle('hidden', ks);
+  }
+  $('jksOutMode').addEventListener('change', refreshJksMode);
 
   $('btnConvert').addEventListener('click', function () {
     var msgEl = $('outputMsg'); clearMsg(msgEl);
@@ -1347,6 +1422,7 @@
     ['pfxPassword', 'keyPassword', 'pfxOutPassword', 'jksOutPassword', 'keyOutPassword'].forEach(function (id) { $(id).value = ''; });
     $('pfxOutAlias').value = 'certificado';
     $('jksOutAlias').value = 'certificado';
+    $('jksOutMode').value = 'keystore';
     $$('.fmt').forEach(function (c) { c.setAttribute('aria-checked', 'false'); });
     ['optsPem', 'optsPfx', 'optsJks', 'optsKey'].forEach(function (id) { $(id).classList.add('hidden'); });
     ['sourceMsg', 'pairMsg', 'outputMsg'].forEach(function (id) { clearMsg($(id)); });

@@ -211,7 +211,7 @@
         <button class="fmt" role="radio" aria-checked="false" data-fmt="cer-pem" type="button"><span class="fmt-ext">.CER</span><span class="fmt-desc">Certificado único, texto Base64</span></button>
         <button class="fmt" role="radio" aria-checked="false" data-fmt="cer-der" type="button"><span class="fmt-ext">.CER · DER</span><span class="fmt-desc">Certificado único, binário</span></button>
         <button class="fmt" role="radio" aria-checked="false" data-fmt="pfx" type="button"><span class="fmt-ext">.PFX / .P12</span><span class="fmt-desc">Pacote com chave privada e senha</span></button>
-        <button class="fmt" role="radio" aria-checked="false" data-fmt="jks" type="button"><span class="fmt-ext">.JKS</span><span class="fmt-desc">Truststore Java (só certificados)</span></button>
+        <button class="fmt" role="radio" aria-checked="false" data-fmt="jks" type="button"><span class="fmt-ext">.JKS</span><span class="fmt-desc">Keystore Java (chave + cadeia) ou truststore</span></button>
         <button class="fmt" role="radio" aria-checked="false" data-fmt="key" type="button"><span class="fmt-ext">.KEY</span><span class="fmt-desc">Somente a chave privada</span></button>
       </div>
 
@@ -263,6 +263,17 @@
 
       <div class="opts hidden" id="optsJks">
         <div class="grid-2">
+          <div class="tf select">
+            <select id="jksOutMode">
+              <option value="keystore">Keystore — chave privada + cadeia</option>
+              <option value="truststore">Truststore — só certificados</option>
+            </select>
+            <label for="jksOutMode">Conteúdo</label>
+          </div>
+          <div class="tf">
+            <input type="text" id="jksOutAlias" placeholder=" " value="certificado" autocomplete="off">
+            <label for="jksOutAlias">Alias</label>
+          </div>
           <div class="tf">
             <input type="password" id="jksOutPassword" placeholder=" " autocomplete="new-password">
             <label for="jksOutPassword">Senha do keystore <span class="req">*</span></label>
@@ -270,15 +281,22 @@
               <svg class="icon" viewBox="0 0 24 24"><use href="#i-eye"/></svg>
             </button>
           </div>
-          <div class="tf">
-            <input type="text" id="jksOutAlias" placeholder=" " value="certificado" autocomplete="off">
-            <label for="jksOutAlias">Prefixo do alias</label>
-          </div>
         </div>
-        <div class="msg warn show">Gera um <b>truststore</b> (somente certificados públicos). JKS com chave privada usa algoritmo proprietário da Oracle, não reimplementado aqui.</div>
-        <details><summary>Preciso de um JKS com a chave privada</summary><pre class="code">keytool -importkeystore \
-  -srckeystore certificado.pfx -srcstoretype PKCS12 \
-  -destkeystore certificado.jks -deststoretype JKS</pre></details>
+        <div class="msg warn show hidden" id="jksNeedKey">O modo keystore requer uma chave privada carregada na etapa 1.</div>
+        <div class="msg info show" id="jksKeystoreInfo"><span>Gera um <b>PrivateKeyEntry</b> com a chave e a cadeia (leaf → intermediárias → raiz). A senha da chave é a mesma do keystore, como o Tomcat espera por padrão.</span></div>
+        <details id="jksTomcatHelp"><summary>Exemplo de conector no Tomcat (server.xml)</summary><pre class="code">&lt;Connector port="8443" protocol="org.apache.coyote.http11.Http11NioProtocol"
+           SSLEnabled="true" maxThreads="150" scheme="https" secure="true"&gt;
+  &lt;SSLHostConfig&gt;
+    &lt;Certificate certificateKeystoreFile="conf/certificado.jks"
+                 certificateKeystorePassword="SUA_SENHA"
+                 certificateKeyAlias="certificado"
+                 type="RSA" /&gt;
+  &lt;/SSLHostConfig&gt;
+&lt;/Connector&gt;
+
+# conferir:
+keytool -list -v -keystore certificado.jks</pre></details>
+        <div class="msg info show hidden" id="jksTruststoreInfo"><span>Gera um <b>truststore</b>: cada certificado selecionado vira um TrustedCertEntry (alias-1, alias-2…).</span></div>
       </div>
 
       <div class="opts hidden" id="optsKey">
@@ -862,7 +880,7 @@ IP.1  = 10.20.30.40</pre>
               <tr><td><b>.PEM</b></td><td>Cadeia + chave (opcional)</td><td>Apache, Nginx, HAProxy</td></tr>
               <tr><td><b>.CRT / .CER</b></td><td>Só o certificado principal</td><td>Junto com a <code>.key</code> separada</td></tr>
               <tr><td><b>.KEY</b></td><td>Só a chave privada</td><td>Extrair a chave de um PFX</td></tr>
-              <tr><td><b>.JKS</b></td><td>Só certificados (truststore)</td><td>Java, para confiar em uma AC</td></tr>
+              <tr><td><b>.JKS</b></td><td>Chave + cadeia (keystore) ou só certificados (truststore)</td><td>Tomcat/Java antigos; truststore para confiar em uma AC</td></tr>
             </tbody>
           </table>
 
@@ -876,7 +894,7 @@ IP.1  = 10.20.30.40</pre>
             <p><b>Extrair chave e certificado de um PFX (para Nginx/Apache):</b> leia o PFX com a senha → formato <b>.PEM</b> com <i>Incluir a chave privada</i> desligado → depois formato <b>.KEY</b>.</p>
             <p><b>Trocar a senha de um PFX:</b> leia com a senha antiga → formato <b>.PFX</b> com a senha nova.</p>
             <p><b>Resolver appliance que recusa o PFX:</b> gere de novo escolhendo <b>3DES</b>. Se o problema for a chave, exporte em <b>PKCS#1</b>.</p>
-            <p><b>JKS com chave privada:</b> gere o <code>.pfx</code> e converta — o comando <code>keytool</code> aparece na própria tela. Desde o Java 9 o PKCS#12 é o padrão, então normalmente o <code>.pfx</code> serve direto.</p>
+            <p><b>JKS com chave privada:</b> escolha <code>.JKS</code> → "Keystore" com a chave carregada na etapa 1. Desde o Java 9 o PKCS#12 é o padrão, então o <code>.pfx</code> também costuma servir direto.</p>
           </details>
         </article>
 

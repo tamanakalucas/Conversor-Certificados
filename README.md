@@ -14,7 +14,7 @@ Fluxo em três etapas, o mesmo de antes, com melhorias:
 - **Origem**: `.pfx`/`.p12` com senha, ou `.pem`/`.crt`/`.cer`/`.der` + chave opcional. Aceita também **DER binário, base64 sem cabeçalho e `.p7b` (PKCS#7)**, e um campo separado para a **cadeia / CA intermediária** (vários arquivos de uma vez).
 - **Conteúdo detectado**: cada certificado vira um cartão com subject, issuer, validade, serial e SAN; escolha qual é o leaf e quais entram na exportação. Certificados expirados ganham selo, e o cartão que corresponde à chave privada é marcado.
 - **Validação chave ↔ certificado**: o módulo RSA da chave é comparado com o do certificado. Se não baterem, a geração do PFX é bloqueada com explicação — antes o arquivo saía quebrado e só falhava na importação.
-- **Saída**: `.PEM`, `.CRT`/`.CER` (PEM ou DER), `.PFX/.P12`, `.JKS` (truststore) e `.KEY`. O PFX agora permite escolher a cifra (**3DES** para compatibilidade com Windows/IIS/Java, ou AES-128/256), monta a cadeia na ordem leaf → intermediária → raiz e mostra o comando OpenSSL equivalente. Os arquivos saem nomeados pelo CN do certificado.
+- **Saída**: `.PEM`, `.CRT`/`.CER` (PEM ou DER), `.PFX/.P12`, `.JKS` (keystore com chave privada ou truststore) e `.KEY`. O PFX agora permite escolher a cifra (**3DES** para compatibilidade com Windows/IIS/Java, ou AES-128/256), monta a cadeia na ordem leaf → intermediária → raiz e mostra o comando OpenSSL equivalente. Os arquivos saem nomeados pelo CN do certificado.
 
 ### 2. Gerar CSR + chave
 - Subject completo (CN, O, OU, L, ST, C, e-mail) com os tipos ASN.1 corretos (`C` como PrintableString, e-mail como IA5String).
@@ -124,7 +124,7 @@ O node-forge é servido localmente (versão 1.4.0, mais recente que a 1.3.1 do C
 ## Limitações
 
 - **Apenas chaves RSA.** ECDSA não é suportado — o node-forge não assina CSR nem monta PKCS#12 com curvas elípticas.
-- O `.JKS` gerado é um **truststore** (somente certificados). JKS com chave privada usa algoritmo proprietário da Oracle; a tela mostra o comando `keytool` equivalente.
+- O `.JKS` pode ser um **keystore** (PrivateKeyEntry com a chave e a cadeia, protegida pelo algoritmo `KeyProtector` do JDK, OID 1.3.6.1.4.1.42.2.17.1.1 — pronto para o Tomcat) ou um **truststore** (somente certificados). A senha da chave é igual à do keystore.
 - O PFX é gerado com MAC SHA-1 (padrão do node-forge, aceito pela maioria dos servidores e pelo OpenSSL 3.x).
 
 ## Verificação
